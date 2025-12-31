@@ -2,7 +2,9 @@
 Evaluation model for storing AI-generated candidate assessments.
 
 This table stores the results of Starscreen's AI scoring engine,
-including match scores, category breakdowns, and narrative explanations.
+including relevance indicators, category breakdowns, and narrative explanations.
+
+NOTE: Relevance indicators are decision-support guidance, not hiring decisions.
 """
 
 from sqlalchemy import Column, Integer, ForeignKey, Float, Text, DateTime, func

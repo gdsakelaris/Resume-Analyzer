@@ -53,7 +53,7 @@ class CandidateListResponse(BaseModel):
     original_filename: str
     status: CandidateStatus
     error_message: Optional[str] = None
-    score: Optional[float] = Field(None, description="AI match score (0-100) from evaluation")
+    score: Optional[float] = Field(None, description="Relevance indicator (0-100) - guidance only, not a hiring decision")
     created_at: datetime
 
     class Config:

@@ -3,7 +3,7 @@ Starscreen Hybrid Scoring Engine - AI Judgment + Python Math.
 
 This module implements a fundamentally superior scoring system that:
 - AI: Uses Chain-of-Thought reasoning to GRADE competence (0-100) per category
-- AI: Automatically EXTRACTS contact info (Name, Email) for the database
+- AI: Automatically EXTRACTS contact info (Name, Email, Phone, Location) for the database
 - Python: Calculates deterministic weighted scores based on importance
 - Values projects, volunteer work, and implicit signals (not just keywords)
 - Detects keyword stuffing and prioritizes evidence of actual competence
@@ -39,7 +39,7 @@ def score_candidate_task(self, candidate_id: int):
 
     Architecture:
     1. AI: Grades each category (0-100) based on semantic evidence
-    2. AI: Extracts First Name, Last Name, and Email from resume text
+    2. AI: Extracts First Name, Last Name, Email, Phone, Location from resume text
     3. Python: Calculates weighted average using importance from job_config
 
     This prevents AI from hallucinating weighted math while maintaining
@@ -47,7 +47,7 @@ def score_candidate_task(self, candidate_id: int):
 
     Flow:
     - AI analyzes resume -> returns Grades + Contact Info
-    - Python updates Candidate table with Name/Email
+    - Python updates Candidate table with Name/Email/Phone/Location
     - Python calculates final score = sum(score*importance) / sum(importance)
 
     Args:
@@ -183,7 +183,7 @@ IMPORTANT: Do NOT include a "match_score" field. Python will calculate that.
             logger.info(f"[Task {self.request.id}] Extracted contact info: {candidate.first_name} {candidate.last_name} | {candidate.phone} | {candidate.location} | {candidate.email}")
 
         # ============================================================
-        # 2. PYTHON DOES THE MATH (Deterministic Weighted Scoring)
+        # PYTHON DOES THE MATH (Deterministic Weighted Scoring)
         # ============================================================
 
         total_weighted_score = 0.0
