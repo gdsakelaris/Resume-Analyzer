@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Starscreen - Intelligent Resume Screening</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f5f7fa;
+            color: #2c3e50;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px 0;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            font-size: 2em;
+            margin-bottom: -15px;
+        }
+
+        .subtitle {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .card h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            display: flex;
+            align-items: center;
+        }
+
+        .card h2::before {
+            content: "→";
+            margin-right: 10px;
+            font-weight: bold;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #34495e;
+        }
+
+        input[type="text"],
+        textarea,
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e8ed;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus,
+        textarea:focus,
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .file-upload {
+            border: 3px dashed #667eea;
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+            background: #f8f9ff;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .file-upload:hover {
+            background: #f0f2ff;
+            border-color: #764ba2;
+        }
+
+        .file-upload input[type="file"] {
+            display: none;
+        }
+
+        .file-upload-label {
+            font-size: 16px;
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .file-upload-hint {
+            margin-top: 10px;
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 14px 28px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: #95a5a6;
+        }
+
+        .btn-secondary:hover {
+            background: #7f8c8d;
+            box-shadow: 0 4px 12px rgba(127, 140, 141, 0.4);
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .job-list, .candidate-list {
+            margin-top: 20px;
+        }
+
+        .job-item, .candidate-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 4px solid #667eea;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .job-item:hover, .candidate-item:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+        }
+
+        .job-item.active {
+            background: #e7ecff;
+            border-left-color: #764ba2;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-processing {
+            background: #cfe2ff;
+            color: #084298;
+        }
+
+        .status-completed {
+            background: #d1e7dd;
+            color: #0f5132;
+        }
+
+        .status-failed {
+            background: #f8d7da;
+            color: #842029;
+        }
+
+        .status-uploaded {
+            background: #e7f3ff;
+            color: #004085;
+        }
+
+        .status-parsed {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #7f8c8d;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            opacity: 0.9;
+            font-size: 0.9em;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .two-column {
+                grid-template-columns: 1fr;
+            }
+
+            .stats {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Starscreen</h1>
+            <p class="subtitle">Intelligent Resume Screening</p>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Alert Messages -->
+        <div id="alertContainer"></div>
+
+        <!-- Step 1: Create or Select Job -->
+        <div class="card">
+            <h2>Step 1: Create or Select Job</h2>
+
+            <div class="form-group">
+                <label>Existing Jobs</label>
+                <div id="jobList" class="loading">Loading jobs...</div>
+            </div>
+
+            <div class="form-group">
+                <label>Or Create New Job</label>
+                <input type="text" id="jobTitle" placeholder="e.g., Senior Software Engineer">
+            </div>
+
+            <div class="form-group">
+                <label>Job Description</label>
+                <textarea id="jobDescription" placeholder="Enter detailed job requirements, skills needed, etc."></textarea>
+            </div>
+
+            <button id="createJobBtn" onclick="createJob()">Create New Job</button>
+        </div>
+
+        <!-- Step 2: Upload Resumes -->
+        <div class="card" id="uploadSection">
+            <h2>Step 2: Upload Resumes</h2>
+
+            <div id="uploadWarning" class="alert alert-info">
+                Please select or create a job first
+            </div>
+
+            <div id="uploadForm" class="hidden">
+                <div class="two-column">
+                    <!-- Single Upload -->
+                    <div>
+                        <h3 style="margin-bottom: 15px;">Single Resume Upload</h3>
+                        <div class="file-upload" onclick="document.getElementById('singleFile').click()">
+                            <input type="file" id="singleFile" accept=".pdf" onchange="uploadSingleResume()">
+                            <div class="file-upload-label">📄 Click to upload a PDF resume</div>
+                            <div class="file-upload-hint">Supports PDF only</div>
+                        </div>
+                    </div>
+
+                    <!-- Bulk Upload -->
+                    <div>
+                        <h3 style="margin-bottom: 15px;">Bulk Upload (ZIP)</h3>
+                        <div class="file-upload" onclick="document.getElementById('zipFile').click()">
+                            <input type="file" id="zipFile" accept=".zip" onchange="uploadBulkResumes()">
+                            <div class="file-upload-label">📦 Click to upload ZIP file</div>
+                            <div class="file-upload-hint">Upload multiple PDFs at once</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 3: View Candidates -->
+        <div class="card" id="candidatesSection">
+            <h2>Step 3: View Candidates</h2>
+
+            <div class="stats" id="statsContainer" style="display: none;">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalCandidates">0</div>
+                    <div class="stat-label">Total Candidates</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="parsedCandidates">0</div>
+                    <div class="stat-label">Parsed</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="processingCandidates">0</div>
+                    <div class="stat-label">Processing</div>
+                </div>
+            </div>
+
+            <div id="candidateList" class="alert alert-info">
+                Select a job to view candidates
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000/api/v1';
+        let selectedJobId = null;
+        let refreshInterval = null;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadJobs();
+        });
+
+        // Alert Functions
+        function showAlert(message, type = 'info') {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.textContent = message;
+
+            const container = document.getElementById('alertContainer');
+            container.appendChild(alertDiv);
+
+            setTimeout(() => alertDiv.remove(), 5000);
+        }
+
+        // Load Jobs
+        async function loadJobs() {
+            try {
+                const response = await fetch(`${API_BASE}/jobs/`);
+                const jobs = await response.json();
+
+                const jobList = document.getElementById('jobList');
+
+                if (jobs.length === 0) {
+                    jobList.innerHTML = '<p style="color: #7f8c8d;">No jobs created yet. Create one below!</p>';
+                    return;
+                }
+
+                jobList.innerHTML = '';
+                jobs.forEach(job => {
+                    const jobItem = document.createElement('div');
+                    jobItem.className = 'job-item';
+                    jobItem.innerHTML = `
+                        <strong>${job.title}</strong>
+                        <span class="status-badge status-${job.status.toLowerCase()}">${job.status}</span>
+                        <div style="font-size: 0.9em; color: #7f8c8d; margin-top: 5px;">
+                            ${job.description.substring(0, 100)}${job.description.length > 100 ? '...' : ''}
+                        </div>
+                    `;
+                    jobItem.onclick = () => selectJob(job.id, jobItem);
+                    jobList.appendChild(jobItem);
+                });
+            } catch (error) {
+                showAlert('Failed to load jobs: ' + error.message, 'error');
+            }
+        }
+
+        // Create Job
+        async function createJob() {
+            const title = document.getElementById('jobTitle').value;
+            const description = document.getElementById('jobDescription').value;
+
+            if (!title || !description) {
+                showAlert('Please fill in both title and description', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('createJobBtn');
+            btn.disabled = true;
+            btn.textContent = 'Creating...';
+
+            try {
+                const response = await fetch(`${API_BASE}/jobs/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title, description })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showAlert(`Job created successfully! ID: ${result.job_id}`, 'success');
+                    document.getElementById('jobTitle').value = '';
+                    document.getElementById('jobDescription').value = '';
+                    loadJobs();
+                } else {
+                    showAlert('Failed to create job: ' + result.detail, 'error');
+                }
+            } catch (error) {
+                showAlert('Error creating job: ' + error.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Create New Job';
+            }
+        }
+
+        // Select Job
+        function selectJob(jobId, element) {
+            selectedJobId = jobId;
+
+            // Update UI
+            document.querySelectorAll('.job-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            element.classList.add('active');
+
+            // Show upload section
+            document.getElementById('uploadWarning').classList.add('hidden');
+            document.getElementById('uploadForm').classList.remove('hidden');
+
+            // Load candidates
+            loadCandidates();
+
+            // Start auto-refresh
+            if (refreshInterval) clearInterval(refreshInterval);
+            refreshInterval = setInterval(loadCandidates, 3000);
+
+            showAlert(`Selected job ID: ${jobId}`, 'success');
+        }
+
+        // Upload Single Resume
+        async function uploadSingleResume() {
+            if (!selectedJobId) {
+                showAlert('Please select a job first', 'error');
+                return;
+            }
+
+            const fileInput = document.getElementById('singleFile');
+            const file = fileInput.files[0];
+
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                showAlert('Uploading resume...', 'info');
+
+                const response = await fetch(`${API_BASE}/jobs/${selectedJobId}/candidates/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showAlert(`Resume uploaded! Processing candidate ${result.candidate_id}`, 'success');
+                    fileInput.value = '';
+                    loadCandidates();
+                } else {
+                    showAlert('Upload failed: ' + result.detail, 'error');
+                }
+            } catch (error) {
+                showAlert('Error uploading resume: ' + error.message, 'error');
+            }
+        }
+
+        // Upload Bulk Resumes
+        async function uploadBulkResumes() {
+            if (!selectedJobId) {
+                showAlert('Please select a job first', 'error');
+                return;
+            }
+
+            const fileInput = document.getElementById('zipFile');
+            const file = fileInput.files[0];
+
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                showAlert('Uploading ZIP file...', 'info');
+
+                const response = await fetch(`${API_BASE}/jobs/${selectedJobId}/candidates/bulk-upload-zip`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showAlert(
+                        `Bulk upload complete! ${result.processed_count} resumes processed, ${result.skipped_count} skipped`,
+                        'success'
+                    );
+                    fileInput.value = '';
+                    loadCandidates();
+                } else {
+                    showAlert('Bulk upload failed: ' + result.detail, 'error');
+                }
+            } catch (error) {
+                showAlert('Error uploading ZIP: ' + error.message, 'error');
+            }
+        }
+
+        // Load Candidates
+        async function loadCandidates() {
+            if (!selectedJobId) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/jobs/${selectedJobId}/candidates/`);
+                const candidates = await response.json();
+
+                const candidateList = document.getElementById('candidateList');
+
+                if (candidates.length === 0) {
+                    candidateList.innerHTML = '<p class="alert alert-info">No candidates uploaded yet. Upload resumes above!</p>';
+                    document.getElementById('statsContainer').style.display = 'none';
+                    return;
+                }
+
+                // Update stats
+                const stats = {
+                    total: candidates.length,
+                    parsed: candidates.filter(c => c.status === 'PARSED').length,
+                    processing: candidates.filter(c => c.status === 'PROCESSING' || c.status === 'UPLOADED').length
+                };
+
+                document.getElementById('totalCandidates').textContent = stats.total;
+                document.getElementById('parsedCandidates').textContent = stats.parsed;
+                document.getElementById('processingCandidates').textContent = stats.processing;
+                document.getElementById('statsContainer').style.display = 'grid';
+
+                // Display candidates
+                candidateList.innerHTML = '<div class="candidate-list"></div>';
+                const container = candidateList.querySelector('.candidate-list');
+
+                candidates.forEach(candidate => {
+                    const candidateItem = document.createElement('div');
+                    candidateItem.className = 'candidate-item';
+                    candidateItem.innerHTML = `
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <strong>${candidate.original_filename}</strong>
+                                <div style="font-size: 0.85em; color: #7f8c8d; margin-top: 3px;">
+                                    Uploaded: ${new Date(candidate.created_at).toLocaleString()}
+                                </div>
+                            </div>
+                            <span class="status-badge status-${candidate.status.toLowerCase()}">${candidate.status}</span>
+                        </div>
+                    `;
+                    container.appendChild(candidateItem);
+                });
+
+            } catch (error) {
+                console.error('Error loading candidates:', error);
+            }
+        }
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (refreshInterval) clearInterval(refreshInterval);
+        });
+    </script>
+</body>
+</html>

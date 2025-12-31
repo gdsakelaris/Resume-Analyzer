@@ -1,3 +1,5 @@
+.claude
+
 # Python
 __pycache__/
 *.py[cod]
@@ -50,6 +52,14 @@ logs/
 .pytest_cache/
 .coverage
 htmlcov/
+coverage.xml
+.tox/
+*.cover
+
+# Old/backup files
+*.old
+*.bak
+*.backup
 
 # OS
 .DS_Store
@@ -57,3 +67,6 @@ Thumbs.db
 
 # Docker
 docker-compose.override.yml
+
+# Uploaded Files
+uploads/

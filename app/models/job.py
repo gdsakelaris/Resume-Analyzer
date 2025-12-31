@@ -1,5 +1,6 @@
 import enum
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, Enum, func
+from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import JSONB
 from app.core.database import Base
 
@@ -42,6 +43,9 @@ class Job(Base):
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relationships
+    candidates = relationship("Candidate", back_populates="job")
 
     def __repr__(self):
         return f"<Job(id={self.id}, title='{self.title}', status={self.status.value})>"

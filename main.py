@@ -1,11 +1,13 @@
 import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
 
 from app.core.config import settings
 from app.core.database import init_db
-from app.api.endpoints import jobs
+from app.api.endpoints import jobs, candidates
 
 # Configure logging
 logging.basicConfig(
@@ -21,7 +23,7 @@ async def lifespan(app: FastAPI):
     Lifespan context manager for startup and shutdown events.
     """
     # Startup
-    logger.info("Starting up Resume Analyzer API...")
+    logger.info("Starting up Starscreen API...")
     logger.info("Initializing database...")
     init_db()
     logger.info("Database initialized successfully")
@@ -29,14 +31,14 @@ async def lifespan(app: FastAPI):
     yield
 
     # Shutdown
-    logger.info("Shutting down Resume Analyzer API...")
+    logger.info("Shutting down Starscreen API...")
 
 
 # Create FastAPI application
 app = FastAPI(
-    title=settings.PROJECT_NAME,
+    title="Starscreen API",
     version="1.0.0",
-    description="AI-powered Resume Analysis and Job Matching API",
+    description="The intelligent screening engine for modern recruiting",
     lifespan=lifespan
 )
 
@@ -49,18 +51,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Mount static files
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
 # Include routers
 app.include_router(jobs.router, prefix=settings.API_V1_STR)
+app.include_router(candidates.router, prefix=settings.API_V1_STR)
 
 
 @app.get("/")
 async def root():
-    """Root endpoint - API health check"""
-    return {
-        "message": "Resume Analyzer API",
-        "version": "1.0.0",
-        "status": "healthy"
-    }
+    """Serve the web UI"""
+    return FileResponse("static/index.html")
 
 
 @app.get("/health")

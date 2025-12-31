@@ -32,8 +32,13 @@ def get_db():
 
 def init_db():
     """
-    Initialize database - create all tables.
-    Call this on application startup.
+    Initialize database.
+
+    We rely on Alembic for table creation now, so this is just a placeholder
+    to ensure models are imported/registered.
+
+    Note: Base.metadata.create_all() is disabled to avoid conflicts with Alembic.
+    Use "alembic upgrade head" to create/update database schema.
     """
-    from app.models import job  # Import models to register them
-    Base.metadata.create_all(bind=engine)
+    from app.models import job, candidate  # Import models to register them
+    # Base.metadata.create_all(bind=engine)  # Disabled - use Alembic instead

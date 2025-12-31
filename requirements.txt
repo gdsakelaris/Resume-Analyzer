@@ -1,7 +1,8 @@
 # FastAPI Framework
 fastapi==0.109.0
 uvicorn[standard]==0.27.0
-python-multipart==0.0.6
+python-multipart==0.0.9
+aiofiles==23.2.1
 
 # Database
 sqlalchemy==2.0.25
@@ -11,6 +12,7 @@ alembic==1.13.1
 # Pydantic for data validation
 pydantic==2.5.3
 pydantic-settings==2.1.0
+email-validator==2.1.0
 
 # OpenAI for AI services
 openai==1.10.0
@@ -22,7 +24,7 @@ celery==5.3.6
 # PDF Processing
 pypdf2==3.0.1
 pdfplumber==0.10.3
-python-magic-bin==0.4.14  # For Windows; use python-magic on Linux/Mac
+python-magic==0.4.27
 
 # Environment variables
 python-dotenv==1.0.0
@@ -32,3 +34,8 @@ httpx==0.26.0
 
 # Date/Time utilities
 python-dateutil==2.8.2
+
+# Testing
+pytest==7.4.4
+pytest-cov==4.1.0
+pytest-asyncio==0.23.3

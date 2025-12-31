@@ -14,6 +14,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 RUN apt-get update && apt-get install -y \
     gcc \
     postgresql-client \
+    libmagic1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first (for better caching)

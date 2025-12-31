@@ -1,12 +1,15 @@
 import logging
+from typing import Optional
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
-from app.core.database import get_db
-from app.models.job import Job, JobStatus
-from app.schemas.job import JobCreateRequest, JobResponse, JobCreateResponse, JobStatusEnum
-from app.tasks import generate_job_config_task
 
-router = APIRouter(prefix="/jobs", tags=["jobs"])
+from app.core.database import get_db
+from app.crud import job as job_crud
+from app.models.job import JobStatus
+from app.schemas.job import JobCreateRequest, JobResponse, JobCreateResponse, JobStatusEnum
+from app.tasks import job_tasks
+
+router = APIRouter(prefix="/jobs", tags=["Starscreen Jobs"])
 logger = logging.getLogger(__name__)
 
 
@@ -22,7 +25,7 @@ def create_job(
     happens asynchronously in a Celery worker via Redis.
 
     Flow:
-    1. Job saved to DB with status=PENDING
+    1. Job saved to DB with status=PENDING (via CRUD layer)
     2. Task sent to Redis queue
     3. Celery worker picks up task
     4. Worker sets status=PROCESSING
@@ -31,22 +34,12 @@ def create_job(
     Use GET /jobs/{job_id} to check status and get results.
     """
     try:
-        # Create job record with PENDING status
-        new_job = Job(
-            title=request.title,
-            description=request.description,
-            location=request.location,
-            work_authorization_required=request.work_authorization_required,
-            status=JobStatus.PENDING
-        )
-
-        db.add(new_job)
-        db.commit()
-        db.refresh(new_job)
+        # Create job using CRUD layer
+        new_job = job_crud.create(db, request)
 
         # Queue task to Celery worker via Redis
-        # .delay() is async - it sends the task to Redis and returns immediately
-        task = generate_job_config_task.delay(
+        # .delay() sends task to Redis and returns immediately
+        task = job_tasks.generate_job_config_task.delay(
             new_job.id,
             new_job.title,
             new_job.description
@@ -77,7 +70,7 @@ def get_job(job_id: int, db: Session = Depends(get_db)):
     - COMPLETED: AI generation complete, check job_config field
     - FAILED: AI generation failed, check error_message field
     """
-    job = db.query(Job).filter(Job.id == job_id).first()
+    job = job_crud.get_by_id(db, job_id)
 
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
@@ -89,7 +82,7 @@ def get_job(job_id: int, db: Session = Depends(get_db)):
 def list_jobs(
     skip: int = 0,
     limit: int = 100,
-    status: JobStatusEnum = None,
+    status: Optional[JobStatusEnum] = None,
     db: Session = Depends(get_db)
 ):
     """
@@ -103,13 +96,10 @@ def list_jobs(
     if limit > 100:
         limit = 100
 
-    query = db.query(Job)
+    # Convert enum to JobStatus if provided
+    status_filter = JobStatus[status.value] if status else None
 
-    # Filter by status if provided
-    if status:
-        query = query.filter(Job.status == JobStatus[status.value])
-
-    jobs = query.offset(skip).limit(limit).all()
+    jobs = job_crud.get_multi(db, skip=skip, limit=limit, status=status_filter)
     return jobs
 
 
@@ -118,13 +108,10 @@ def delete_job(job_id: int, db: Session = Depends(get_db)):
     """
     Delete a job by ID.
     """
-    job = db.query(Job).filter(Job.id == job_id).first()
+    deleted = job_crud.delete(db, job_id)
 
-    if not job:
+    if not deleted:
         raise HTTPException(status_code=404, detail="Job not found")
-
-    db.delete(job)
-    db.commit()
 
     logger.info(f"Deleted job {job_id}")
     return None
