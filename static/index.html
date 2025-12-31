@@ -1,655 +1,539 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="h-full bg-slate-50">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Starscreen - Intelligent Resume Screening</title>
+    <title>Starscreen | Intelligent Recruiting</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        brand: {
+                            50: '#f0fdfa',
+                            100: '#ccfbf1',
+                            500: '#14b8a6', // Teal
+                            600: '#0d9488',
+                            900: '#134e4a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: #f5f7fa;
-            color: #2c3e50;
-            line-height: 1.6;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-
-        header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 30px 0;
-            margin-bottom: 30px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-
-        h1 {
-            font-size: 2em;
-            margin-bottom: -15px;
-        }
-
-        .subtitle {
-            opacity: 0.9;
-            font-size: 1.1em;
-        }
-
-        .card {
-            background: white;
-            border-radius: 12px;
-            padding: 25px;
-            margin-bottom: 25px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-        }
-
-        .card h2 {
-            color: #667eea;
-            margin-bottom: 20px;
-            font-size: 1.5em;
-            display: flex;
-            align-items: center;
-        }
-
-        .card h2::before {
-            content: "→";
-            margin-right: 10px;
-            font-weight: bold;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: #34495e;
-        }
-
-        input[type="text"],
-        textarea,
-        select {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e1e8ed;
-            border-radius: 8px;
-            font-size: 14px;
-            transition: border-color 0.3s;
-        }
-
-        input[type="text"]:focus,
-        textarea:focus,
-        select:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        textarea {
-            min-height: 120px;
-            resize: vertical;
-        }
-
-        .file-upload {
-            border: 3px dashed #667eea;
-            border-radius: 12px;
-            padding: 40px;
-            text-align: center;
-            background: #f8f9ff;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .file-upload:hover {
-            background: #f0f2ff;
-            border-color: #764ba2;
-        }
-
-        .file-upload input[type="file"] {
-            display: none;
-        }
-
-        .file-upload-label {
-            font-size: 16px;
-            color: #667eea;
-            font-weight: 600;
-        }
-
-        .file-upload-hint {
-            margin-top: 10px;
-            color: #7f8c8d;
-            font-size: 14px;
-        }
-
-        button {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 14px 28px;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-        }
-
-        button:active {
-            transform: translateY(0);
-        }
-
-        button:disabled {
-            background: #bdc3c7;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .btn-secondary {
-            background: #95a5a6;
-        }
-
-        .btn-secondary:hover {
-            background: #7f8c8d;
-            box-shadow: 0 4px 12px rgba(127, 140, 141, 0.4);
-        }
-
-        .alert {
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-weight: 500;
-        }
-
-        .alert-success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-
-        .alert-error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-
-        .alert-info {
-            background: #d1ecf1;
-            color: #0c5460;
-            border: 1px solid #bee5eb;
-        }
-
-        .job-list, .candidate-list {
-            margin-top: 20px;
-        }
-
-        .job-item, .candidate-item {
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 10px;
-            border-left: 4px solid #667eea;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .job-item:hover, .candidate-item:hover {
-            background: #e9ecef;
-            transform: translateX(5px);
-        }
-
-        .job-item.active {
-            background: #e7ecff;
-            border-left-color: #764ba2;
-        }
-
-        .status-badge {
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-
-        .status-pending {
-            background: #fff3cd;
-            color: #856404;
-        }
-
-        .status-processing {
-            background: #cfe2ff;
-            color: #084298;
-        }
-
-        .status-completed {
-            background: #d1e7dd;
-            color: #0f5132;
-        }
-
-        .status-failed {
-            background: #f8d7da;
-            color: #842029;
-        }
-
-        .status-uploaded {
-            background: #e7f3ff;
-            color: #004085;
-        }
-
-        .status-parsed {
-            background: #d4edda;
-            color: #155724;
-        }
-
-        .loading {
-            text-align: center;
-            padding: 20px;
-            color: #7f8c8d;
-        }
-
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .stat-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px;
-            border-radius: 10px;
-            text-align: center;
-        }
-
-        .stat-number {
-            font-size: 2.5em;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-
-        .stat-label {
-            opacity: 0.9;
-            font-size: 0.9em;
-        }
-
-        .hidden {
-            display: none;
-        }
-
-        .two-column {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-        }
-
-        @media (max-width: 768px) {
-            .two-column {
-                grid-template-columns: 1fr;
-            }
-
-            .stats {
-                grid-template-columns: 1fr;
-            }
-        }
+        [x-cloak] { display: none !important; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
     </style>
 </head>
-<body>
-    <header>
-        <div class="container">
-            <h1>Starscreen</h1>
-            <p class="subtitle">Intelligent Resume Screening</p>
+<body class="h-full flex flex-col antialiased text-slate-900">
+
+    <nav class="bg-white border-b border-slate-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center text-white font-bold text-lg shadow-sm">S</div>
+                    <span class="font-bold text-xl tracking-tight text-slate-800">Starscreen</span>
+                </div>
+                <div class="flex items-center">
+                    <span class="text-sm text-slate-500 bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
+                        v1.0 • Connected
+                    </span>
+                </div>
+            </div>
         </div>
-    </header>
+    </nav>
 
-    <div class="container">
-        <!-- Alert Messages -->
-        <div id="alertContainer"></div>
-
-        <!-- Step 1: Create or Select Job -->
-        <div class="card">
-            <h2>Step 1: Create or Select Job</h2>
-
-            <div class="form-group">
-                <label>Existing Jobs</label>
-                <div id="jobList" class="loading">Loading jobs...</div>
-            </div>
-
-            <div class="form-group">
-                <label>Or Create New Job</label>
-                <input type="text" id="jobTitle" placeholder="e.g., Senior Software Engineer">
-            </div>
-
-            <div class="form-group">
-                <label>Job Description</label>
-                <textarea id="jobDescription" placeholder="Enter detailed job requirements, skills needed, etc."></textarea>
-            </div>
-
-            <button id="createJobBtn" onclick="createJob()">Create New Job</button>
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8" x-data="app()">
+        
+        <div x-show="toast.visible" x-transition 
+             class="fixed top-20 right-5 z-50 flex items-center w-full max-w-xs p-4 space-x-3 text-slate-500 bg-white rounded-lg shadow-xl border-l-4"
+             :class="toast.type === 'error' ? 'border-red-500' : 'border-brand-500'" x-cloak>
+            <div class="text-sm font-medium" x-text="toast.message"></div>
         </div>
 
-        <!-- Step 2: Upload Resumes -->
-        <div class="card" id="uploadSection">
-            <h2>Step 2: Upload Resumes</h2>
+        <div class="grid grid-cols-12 gap-8 h-[calc(100vh-8rem)]">
+            
+            <div class="col-span-12 lg:col-span-4 flex flex-col gap-4 h-full">
+                
+                <div class="flex justify-between items-center">
+                    <h2 class="text-lg font-semibold text-slate-800">Positions</h2>
+                    <button @click="showCreateModal = true" 
+                            class="text-sm bg-brand-600 hover:bg-brand-700 text-white py-2 px-4 rounded-md font-medium transition-colors shadow-sm flex items-center gap-2">
+                        <span>+ New Job</span>
+                    </button>
+                </div>
 
-            <div id="uploadWarning" class="alert alert-info">
-                Please select or create a job first
+                <div class="bg-white rounded-xl shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] border border-slate-100 flex-1 overflow-hidden flex flex-col">
+                    <div class="overflow-y-auto p-2 space-y-2 flex-1 scrollbar-hide">
+                        
+                        <template x-if="jobs.length === 0">
+                            <div class="text-center py-10 px-4">
+                                <div class="text-slate-300 mb-2">
+                                    <svg class="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                                </div>
+                                <h3 class="text-sm font-medium text-slate-900">No jobs found</h3>
+                                <p class="text-xs text-slate-500 mt-1">Create a new position to get started.</p>
+                            </div>
+                        </template>
+
+                        <template x-for="job in jobs" :key="job.id">
+                            <div @click="selectJob(job)" 
+                                 class="group cursor-pointer p-4 rounded-lg transition-all duration-200 border border-transparent hover:border-brand-200 hover:shadow-md"
+                                 :class="selectedJob?.id === job.id ? 'bg-brand-50 border-brand-200 ring-1 ring-brand-200' : 'bg-white hover:bg-slate-50'">
+                                <div class="flex justify-between items-start mb-1">
+                                    <h3 class="font-semibold text-slate-900 group-hover:text-brand-700 transition-colors" x-text="job.title"></h3>
+                                    <span x-show="job.status !== 'COMPLETED'" class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                                          :class="{
+                                              'bg-yellow-100 text-yellow-800': job.status === 'PENDING',
+                                              'bg-blue-100 text-blue-800': job.status === 'PROCESSING',
+                                              'bg-red-100 text-red-800': job.status === 'FAILED'
+                                          }" x-text="job.status"></span>
+                                </div>
+                                <p class="text-xs text-slate-500 line-clamp-2" x-text="job.description"></p>
+                                <div class="mt-3 flex items-center gap-2 text-xs text-slate-400">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                    <span x-text="new Date(job.created_at).toLocaleDateString()"></span>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
             </div>
 
-            <div id="uploadForm" class="hidden">
-                <div class="two-column">
-                    <!-- Single Upload -->
-                    <div>
-                        <h3 style="margin-bottom: 15px;">Single Resume Upload</h3>
-                        <div class="file-upload" onclick="document.getElementById('singleFile').click()">
-                            <input type="file" id="singleFile" accept=".pdf" onchange="uploadSingleResume()">
-                            <div class="file-upload-label">📄 Click to upload a PDF resume</div>
-                            <div class="file-upload-hint">Supports PDF only</div>
+            <div class="col-span-12 lg:col-span-8 h-full flex flex-col">
+                
+                <div x-show="!selectedJob" class="h-full flex flex-col items-center justify-center text-center p-8 bg-white rounded-xl shadow-sm border border-slate-100 border-dashed">
+                    <div class="w-16 h-16 bg-brand-50 rounded-full flex items-center justify-center mb-4">
+                        <svg class="w-8 h-8 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"></path></svg>
+                    </div>
+                    <h3 class="text-lg font-medium text-slate-900">Select a Job</h3>
+                    <p class="text-slate-500 max-w-sm mt-2">Click on a position from the left sidebar to view candidates, upload resumes, and see AI insights.</p>
+                </div>
+
+                <div x-show="selectedJob" class="h-full flex flex-col gap-6" x-cloak>
+                    
+                    <div class="grid grid-cols-3 gap-4">
+                        <div class="bg-white p-5 rounded-xl border border-slate-100 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)]">
+                            <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Candidates</p>
+                            <p class="text-3xl font-bold text-slate-900 mt-1" x-text="candidates.length"></p>
+                        </div>
+                        <div class="bg-white p-5 rounded-xl border border-slate-100 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)]">
+                            <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">AI Screened</p>
+                            <p class="text-3xl font-bold text-brand-600 mt-1" x-text="candidates.filter(c => c.status === 'PARSED' || c.status === 'SCORED').length"></p>
+                        </div>
+                        <div class="bg-white p-5 rounded-xl border border-slate-100 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)]">
+                            <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Processing</p>
+                            <p class="text-3xl font-bold text-blue-600 mt-1" x-text="candidates.filter(c => c.status === 'PROCESSING').length"></p>
                         </div>
                     </div>
 
-                    <!-- Bulk Upload -->
-                    <div>
-                        <h3 style="margin-bottom: 15px;">Bulk Upload (ZIP)</h3>
-                        <div class="file-upload" onclick="document.getElementById('zipFile').click()">
-                            <input type="file" id="zipFile" accept=".zip" onchange="uploadBulkResumes()">
-                            <div class="file-upload-label">📦 Click to upload ZIP file</div>
-                            <div class="file-upload-hint">Upload multiple PDFs at once</div>
+                    <div class="bg-white rounded-xl shadow-[0_4px_20px_-4px_rgba(6,81,237,0.1)] border border-slate-100 flex-1 flex flex-col overflow-hidden">
+                        
+                        <div class="border-b border-slate-100 px-6 flex gap-6">
+                            <button class="py-4 text-sm font-medium border-b-2 border-brand-500 text-brand-600">Candidates</button>
+                            </div>
+
+                        <div class="flex-1 flex flex-col p-6 overflow-hidden">
+                            
+                            <div class="mb-6 flex gap-4">
+                                <label class="flex-1 group relative flex flex-col items-center justify-center p-6 bg-brand-600 hover:bg-brand-700 rounded-xl transition-all cursor-pointer shadow-sm">
+                                    <div class="text-center">
+                                        <svg class="mx-auto h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                        </svg>
+                                        <p class="mt-2 text-sm text-white font-medium">Upload Resume</p>
+                                        <p class="text-xs text-brand-100 mt-1">(PDF, DOC, DOCX)</p>
+                                    </div>
+                                    <input type="file" class="hidden" accept=".pdf,.doc,.docx" @change="uploadFile($event, 'single')">
+                                </label>
+
+                                <label class="flex-1 group relative flex flex-col items-center justify-center p-6 bg-brand-600 hover:bg-brand-700 rounded-xl transition-all cursor-pointer shadow-sm">
+                                    <div class="text-center">
+                                        <svg class="mx-auto h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                                        </svg>
+                                        <p class="mt-2 text-sm text-white font-medium">Batch ZIP Upload</p>
+                                    </div>
+                                    <input type="file" class="hidden" accept=".zip" @change="uploadFile($event, 'bulk')">
+                                </label>
+
+                            </div>
+
+                            <div x-show="selectedCandidates.length > 0"
+                                 class="mb-4 px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
+                                <div class="flex items-center gap-2 text-sm text-blue-900">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                    <span><span x-text="selectedCandidates.length"></span> candidate<span x-show="selectedCandidates.length > 1">s</span> selected</span>
+                                </div>
+                                <button @click="deleteSelectedCandidates()"
+                                        class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                    </svg>
+                                    Delete Selected
+                                </button>
+                            </div>
+
+                            <div class="grid grid-cols-12 gap-4 px-4 py-2 bg-slate-50 rounded-lg text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                                <div class="col-span-1 flex items-center justify-center">
+                                    <input type="checkbox"
+                                           class="w-4 h-4 text-brand-600 bg-white border-slate-300 rounded focus:ring-brand-500 focus:ring-2 cursor-pointer"
+                                           @change="toggleSelectAll($event)"
+                                           :checked="selectedCandidates.length > 0 && selectedCandidates.length === candidates.length">
+                                </div>
+                                <div class="col-span-4">Candidate</div>
+                                <div class="col-span-3">Status</div>
+                                <div class="col-span-3 text-right">Added</div>
+                                <div class="col-span-1"></div>
+                            </div>
+
+                            <div class="overflow-y-auto flex-1 scrollbar-hide space-y-1">
+                                <template x-if="candidates.length === 0">
+                                    <div class="text-center py-8 text-slate-400 text-sm">No candidates yet. Upload resumes to begin.</div>
+                                </template>
+
+                                <template x-for="c in candidates" :key="c.id">
+                                    <div class="grid grid-cols-12 gap-4 px-4 py-3 items-center border-b border-slate-50 hover:bg-slate-50 transition-colors rounded-lg group" x-data="{ menuOpen: false }">
+                                        <div class="col-span-1 flex items-center justify-center">
+                                            <input type="checkbox"
+                                                   class="w-4 h-4 text-brand-600 bg-white border-slate-300 rounded focus:ring-brand-500 focus:ring-2 cursor-pointer"
+                                                   :checked="selectedCandidates.includes(c.id)"
+                                                   @change="toggleCandidate(c.id)">
+                                        </div>
+                                        <div class="col-span-4 flex items-center gap-3">
+                                            <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 text-xs font-bold">
+                                                <span x-text="c.original_filename.substring(0,2).toUpperCase()"></span>
+                                            </div>
+                                            <div class="truncate">
+                                                <p class="text-sm font-medium text-slate-900 truncate" x-text="c.original_filename"></p>
+                                                <p x-show="c.status === 'FAILED' && c.error_message" class="text-xs text-red-600 truncate mt-0.5" x-text="c.error_message"></p>
+                                            </div>
+                                        </div>
+                                        <div class="col-span-3">
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                                                :class="{
+                                                    'bg-slate-100 text-slate-800': c.status === 'UPLOADED',
+                                                    'bg-blue-50 text-blue-700': c.status === 'PROCESSING',
+                                                    'bg-green-50 text-green-700': c.status === 'PARSED' || c.status === 'SCORED',
+                                                    'bg-red-50 text-red-700': c.status === 'FAILED'
+                                                }">
+                                                <span class="w-1.5 h-1.5 rounded-full mr-1.5"
+                                                    :class="{
+                                                        'bg-slate-400': c.status === 'UPLOADED',
+                                                        'bg-blue-500': c.status === 'PROCESSING',
+                                                        'bg-green-500': c.status === 'PARSED' || c.status === 'SCORED',
+                                                        'bg-red-500': c.status === 'FAILED'
+                                                    }"></span>
+                                                <span x-text="c.status"></span>
+                                            </span>
+                                        </div>
+                                        <div class="col-span-3 text-right text-xs text-slate-400">
+                                            <span x-text="new Date(c.created_at).toLocaleDateString()"></span>
+                                        </div>
+                                        <div class="col-span-1 flex items-center justify-center relative">
+                                            <button @click="menuOpen = !menuOpen"
+                                                    @click.away="menuOpen = false"
+                                                    class="p-1 hover:bg-slate-200 rounded text-slate-400 hover:text-slate-600 transition-colors">
+                                                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z"></path>
+                                                </svg>
+                                            </button>
+                                            <div x-show="menuOpen"
+                                                 x-transition
+                                                 class="absolute right-0 top-8 w-48 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-10">
+                                                <button @click="deleteSingleCandidate(c); menuOpen = false"
+                                                        class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                                    </svg>
+                                                    Delete
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Step 3: View Candidates -->
-        <div class="card" id="candidatesSection">
-            <h2>Step 3: View Candidates</h2>
+        <div x-show="showCreateModal" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true" x-cloak>
+            <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                <div x-show="showCreateModal" x-transition.opacity class="fixed inset-0 bg-slate-900 bg-opacity-75 transition-opacity" @click="showCreateModal = false"></div>
 
-            <div class="stats" id="statsContainer" style="display: none;">
-                <div class="stat-card">
-                    <div class="stat-number" id="totalCandidates">0</div>
-                    <div class="stat-label">Total Candidates</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number" id="parsedCandidates">0</div>
-                    <div class="stat-label">Parsed</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number" id="processingCandidates">0</div>
-                    <div class="stat-label">Processing</div>
-                </div>
-            </div>
+                <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
 
-            <div id="candidateList" class="alert alert-info">
-                Select a job to view candidates
+                <div x-show="showCreateModal" x-transition.scale 
+                     class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg w-full">
+                    <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                        <h3 class="text-lg leading-6 font-medium text-slate-900" id="modal-title">Create New Position</h3>
+                        <div class="mt-4 space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700">Job Title</label>
+                                <input type="text" x-model="newJob.title" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 sm:text-sm p-2 border">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700">Description</label>
+                                <textarea x-model="newJob.description" rows="4" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 sm:text-sm p-2 border"></textarea>
+                                <p class="mt-1 text-xs text-slate-500">Paste the full job description here.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-slate-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                        <button type="button" @click="createJob()" :disabled="isCreating"
+                                class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-brand-600 text-base font-medium text-white hover:bg-brand-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50">
+                            <span x-show="!isCreating">Create Position</span>
+                            <span x-show="isCreating">Creating...</span>
+                        </button>
+                        <button type="button" @click="showCreateModal = false" class="mt-3 w-full inline-flex justify-center rounded-md border border-slate-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-slate-700 hover:bg-slate-50 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
+
+        <div x-show="deleteConfirm.visible" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="delete-modal-title" role="dialog" aria-modal="true" x-cloak>
+            <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                <div x-show="deleteConfirm.visible" x-transition.opacity class="fixed inset-0 bg-slate-900 bg-opacity-75 transition-opacity" @click="cancelDelete()"></div>
+
+                <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+                <div x-show="deleteConfirm.visible" x-transition.scale
+                     class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg w-full">
+                    <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                        <div class="sm:flex sm:items-start">
+                            <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+                                <svg class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                            </div>
+                            <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                                <h3 class="text-lg leading-6 font-medium text-slate-900" id="delete-modal-title">
+                                    <span x-text="deleteConfirm.candidates.length === 1 ? 'Remove Candidate' : 'Remove Candidates'"></span>
+                                </h3>
+                                <div class="mt-2">
+                                    <p class="text-sm text-slate-500">
+                                        Are you sure you want to remove
+                                        <span x-show="deleteConfirm.candidates.length === 1" class="font-semibold text-slate-900" x-text="deleteConfirm.candidates[0]?.original_filename"></span>
+                                        <span x-show="deleteConfirm.candidates.length > 1" class="font-semibold text-slate-900"><span x-text="deleteConfirm.candidates.length"></span> candidates</span>?
+                                        This action cannot be undone.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-slate-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                        <button type="button" @click="confirmDelete()"
+                                class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm">
+                            Remove
+                        </button>
+                        <button type="button" @click="cancelDelete()"
+                                class="mt-3 w-full inline-flex justify-center rounded-md border border-slate-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-slate-700 hover:bg-slate-50 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
 
     <script>
         const API_BASE = 'http://localhost:8000/api/v1';
-        let selectedJobId = null;
-        let refreshInterval = null;
 
-        // Initialize
-        document.addEventListener('DOMContentLoaded', () => {
-            loadJobs();
-        });
+        function app() {
+            return {
+                jobs: [],
+                candidates: [],
+                selectedJob: null,
+                showCreateModal: false,
+                isCreating: false,
+                newJob: { title: '', description: '' },
+                toast: { visible: false, message: '', type: 'info' },
+                refreshInterval: null,
+                deleteConfirm: { visible: false, candidates: [] },
+                selectedCandidates: [],
 
-        // Alert Functions
-        function showAlert(message, type = 'info') {
-            const alertDiv = document.createElement('div');
-            alertDiv.className = `alert alert-${type}`;
-            alertDiv.textContent = message;
+                init() {
+                    this.loadJobs();
+                },
 
-            const container = document.getElementById('alertContainer');
-            container.appendChild(alertDiv);
+                showToast(msg, type = 'info') {
+                    this.toast = { visible: true, message: msg, type };
+                    setTimeout(() => this.toast.visible = false, 3000);
+                },
 
-            setTimeout(() => alertDiv.remove(), 5000);
-        }
+                async loadJobs() {
+                    try {
+                        const res = await fetch(`${API_BASE}/jobs/`);
+                        this.jobs = await res.json();
+                        // Sort by ID desc
+                        this.jobs.sort((a, b) => b.id - a.id);
+                    } catch (e) {
+                        this.showToast('Failed to load jobs', 'error');
+                    }
+                },
 
-        // Load Jobs
-        async function loadJobs() {
-            try {
-                const response = await fetch(`${API_BASE}/jobs/`);
-                const jobs = await response.json();
+                async createJob() {
+                    if (!this.newJob.title || !this.newJob.description) return;
+                    this.isCreating = true;
+                    try {
+                        const res = await fetch(`${API_BASE}/jobs/`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(this.newJob)
+                        });
+                        if (res.ok) {
+                            await this.loadJobs();
+                            this.showCreateModal = false;
+                            this.newJob = { title: '', description: '' };
+                            this.showToast('Position created successfully', 'success');
+                        }
+                    } catch (e) {
+                        this.showToast('Error creating job', 'error');
+                    } finally {
+                        this.isCreating = false;
+                    }
+                },
 
-                const jobList = document.getElementById('jobList');
+                selectJob(job) {
+                    this.selectedJob = job;
+                    this.selectedCandidates = [];
+                    this.loadCandidates();
 
-                if (jobs.length === 0) {
-                    jobList.innerHTML = '<p style="color: #7f8c8d;">No jobs created yet. Create one below!</p>';
-                    return;
+                    if (this.refreshInterval) clearInterval(this.refreshInterval);
+                    this.refreshInterval = setInterval(() => this.loadCandidates(), 3000);
+                },
+
+                async loadCandidates() {
+                    if (!this.selectedJob) return;
+                    try {
+                        const res = await fetch(`${API_BASE}/jobs/${this.selectedJob.id}/candidates/`);
+                        this.candidates = await res.json();
+                        // Sort by ID desc
+                        this.candidates.sort((a, b) => b.id - a.id);
+                        // Remove deleted candidates from selection
+                        const candidateIds = this.candidates.map(c => c.id);
+                        this.selectedCandidates = this.selectedCandidates.filter(id => candidateIds.includes(id));
+                    } catch (e) {
+                        console.error(e);
+                    }
+                },
+
+                toggleSelectAll(event) {
+                    if (event.target.checked) {
+                        this.selectedCandidates = this.candidates.map(c => c.id);
+                    } else {
+                        this.selectedCandidates = [];
+                    }
+                },
+
+                toggleCandidate(candidateId) {
+                    const index = this.selectedCandidates.indexOf(candidateId);
+                    if (index > -1) {
+                        this.selectedCandidates.splice(index, 1);
+                    } else {
+                        this.selectedCandidates.push(candidateId);
+                    }
+                },
+
+                deleteSelectedCandidates() {
+                    const selectedCandidateObjs = this.candidates.filter(c => this.selectedCandidates.includes(c.id));
+                    this.deleteConfirm = { visible: true, candidates: selectedCandidateObjs };
+                },
+
+                deleteSingleCandidate(candidate) {
+                    this.deleteConfirm = { visible: true, candidates: [candidate] };
+                },
+
+                async uploadFile(event, type) {
+                    if (!this.selectedJob) return;
+                    const file = event.target.files[0];
+                    if (!file) return;
+
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    const endpoint = type === 'bulk' ? 'bulk-upload-zip' : 'upload';
+
+                    this.showToast(type === 'bulk' ? 'Processing ZIP...' : 'Uploading resume...', 'info');
+
+                    try {
+                        const res = await fetch(`${API_BASE}/jobs/${this.selectedJob.id}/candidates/${endpoint}`, {
+                            method: 'POST',
+                            body: formData
+                        });
+                        if (res.ok) {
+                            this.showToast('Upload successful', 'success');
+                            this.loadCandidates();
+                        } else {
+                            this.showToast('Upload failed', 'error');
+                        }
+                    } catch (e) {
+                        this.showToast('Upload error', 'error');
+                    }
+                    event.target.value = ''; // Reset input
+                },
+
+                async confirmDelete() {
+                    if (!this.deleteConfirm.candidates || this.deleteConfirm.candidates.length === 0) return;
+
+                    const candidates = this.deleteConfirm.candidates;
+                    this.deleteConfirm = { visible: false, candidates: [] };
+
+                    try {
+                        // Delete all selected candidates
+                        const deletePromises = candidates.map(candidate =>
+                            fetch(`${API_BASE}/jobs/${this.selectedJob.id}/candidates/${candidate.id}`, {
+                                method: 'DELETE'
+                            })
+                        );
+
+                        const results = await Promise.all(deletePromises);
+                        const allSucceeded = results.every(res => res.ok);
+
+                        if (allSucceeded) {
+                            const count = candidates.length;
+                            this.showToast(`${count} candidate${count > 1 ? 's' : ''} removed`, 'success');
+                            this.selectedCandidates = [];
+                            this.loadCandidates();
+                        } else {
+                            this.showToast('Some candidates failed to delete', 'error');
+                            this.loadCandidates();
+                        }
+                    } catch (e) {
+                        this.showToast('Error removing candidates', 'error');
+                    }
+                },
+
+                cancelDelete() {
+                    this.deleteConfirm = { visible: false, candidates: [] };
+                },
+
+                viewFailedFile(candidate) {
+                    // Open the file in a new tab (browser will display or download based on file type)
+                    const fileUrl = `${API_BASE}/jobs/${this.selectedJob.id}/candidates/${candidate.id}/file`;
+                    window.open(fileUrl, '_blank');
+                    this.showToast('Opening file...', 'info');
                 }
-
-                jobList.innerHTML = '';
-                jobs.forEach(job => {
-                    const jobItem = document.createElement('div');
-                    jobItem.className = 'job-item';
-                    jobItem.innerHTML = `
-                        <strong>${job.title}</strong>
-                        <span class="status-badge status-${job.status.toLowerCase()}">${job.status}</span>
-                        <div style="font-size: 0.9em; color: #7f8c8d; margin-top: 5px;">
-                            ${job.description.substring(0, 100)}${job.description.length > 100 ? '...' : ''}
-                        </div>
-                    `;
-                    jobItem.onclick = () => selectJob(job.id, jobItem);
-                    jobList.appendChild(jobItem);
-                });
-            } catch (error) {
-                showAlert('Failed to load jobs: ' + error.message, 'error');
             }
         }
-
-        // Create Job
-        async function createJob() {
-            const title = document.getElementById('jobTitle').value;
-            const description = document.getElementById('jobDescription').value;
-
-            if (!title || !description) {
-                showAlert('Please fill in both title and description', 'error');
-                return;
-            }
-
-            const btn = document.getElementById('createJobBtn');
-            btn.disabled = true;
-            btn.textContent = 'Creating...';
-
-            try {
-                const response = await fetch(`${API_BASE}/jobs/`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ title, description })
-                });
-
-                const result = await response.json();
-
-                if (response.ok) {
-                    showAlert(`Job created successfully! ID: ${result.job_id}`, 'success');
-                    document.getElementById('jobTitle').value = '';
-                    document.getElementById('jobDescription').value = '';
-                    loadJobs();
-                } else {
-                    showAlert('Failed to create job: ' + result.detail, 'error');
-                }
-            } catch (error) {
-                showAlert('Error creating job: ' + error.message, 'error');
-            } finally {
-                btn.disabled = false;
-                btn.textContent = 'Create New Job';
-            }
-        }
-
-        // Select Job
-        function selectJob(jobId, element) {
-            selectedJobId = jobId;
-
-            // Update UI
-            document.querySelectorAll('.job-item').forEach(item => {
-                item.classList.remove('active');
-            });
-            element.classList.add('active');
-
-            // Show upload section
-            document.getElementById('uploadWarning').classList.add('hidden');
-            document.getElementById('uploadForm').classList.remove('hidden');
-
-            // Load candidates
-            loadCandidates();
-
-            // Start auto-refresh
-            if (refreshInterval) clearInterval(refreshInterval);
-            refreshInterval = setInterval(loadCandidates, 3000);
-
-            showAlert(`Selected job ID: ${jobId}`, 'success');
-        }
-
-        // Upload Single Resume
-        async function uploadSingleResume() {
-            if (!selectedJobId) {
-                showAlert('Please select a job first', 'error');
-                return;
-            }
-
-            const fileInput = document.getElementById('singleFile');
-            const file = fileInput.files[0];
-
-            if (!file) return;
-
-            const formData = new FormData();
-            formData.append('file', file);
-
-            try {
-                showAlert('Uploading resume...', 'info');
-
-                const response = await fetch(`${API_BASE}/jobs/${selectedJobId}/candidates/upload`, {
-                    method: 'POST',
-                    body: formData
-                });
-
-                const result = await response.json();
-
-                if (response.ok) {
-                    showAlert(`Resume uploaded! Processing candidate ${result.candidate_id}`, 'success');
-                    fileInput.value = '';
-                    loadCandidates();
-                } else {
-                    showAlert('Upload failed: ' + result.detail, 'error');
-                }
-            } catch (error) {
-                showAlert('Error uploading resume: ' + error.message, 'error');
-            }
-        }
-
-        // Upload Bulk Resumes
-        async function uploadBulkResumes() {
-            if (!selectedJobId) {
-                showAlert('Please select a job first', 'error');
-                return;
-            }
-
-            const fileInput = document.getElementById('zipFile');
-            const file = fileInput.files[0];
-
-            if (!file) return;
-
-            const formData = new FormData();
-            formData.append('file', file);
-
-            try {
-                showAlert('Uploading ZIP file...', 'info');
-
-                const response = await fetch(`${API_BASE}/jobs/${selectedJobId}/candidates/bulk-upload-zip`, {
-                    method: 'POST',
-                    body: formData
-                });
-
-                const result = await response.json();
-
-                if (response.ok) {
-                    showAlert(
-                        `Bulk upload complete! ${result.processed_count} resumes processed, ${result.skipped_count} skipped`,
-                        'success'
-                    );
-                    fileInput.value = '';
-                    loadCandidates();
-                } else {
-                    showAlert('Bulk upload failed: ' + result.detail, 'error');
-                }
-            } catch (error) {
-                showAlert('Error uploading ZIP: ' + error.message, 'error');
-            }
-        }
-
-        // Load Candidates
-        async function loadCandidates() {
-            if (!selectedJobId) return;
-
-            try {
-                const response = await fetch(`${API_BASE}/jobs/${selectedJobId}/candidates/`);
-                const candidates = await response.json();
-
-                const candidateList = document.getElementById('candidateList');
-
-                if (candidates.length === 0) {
-                    candidateList.innerHTML = '<p class="alert alert-info">No candidates uploaded yet. Upload resumes above!</p>';
-                    document.getElementById('statsContainer').style.display = 'none';
-                    return;
-                }
-
-                // Update stats
-                const stats = {
-                    total: candidates.length,
-                    parsed: candidates.filter(c => c.status === 'PARSED').length,
-                    processing: candidates.filter(c => c.status === 'PROCESSING' || c.status === 'UPLOADED').length
-                };
-
-                document.getElementById('totalCandidates').textContent = stats.total;
-                document.getElementById('parsedCandidates').textContent = stats.parsed;
-                document.getElementById('processingCandidates').textContent = stats.processing;
-                document.getElementById('statsContainer').style.display = 'grid';
-
-                // Display candidates
-                candidateList.innerHTML = '<div class="candidate-list"></div>';
-                const container = candidateList.querySelector('.candidate-list');
-
-                candidates.forEach(candidate => {
-                    const candidateItem = document.createElement('div');
-                    candidateItem.className = 'candidate-item';
-                    candidateItem.innerHTML = `
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <div>
-                                <strong>${candidate.original_filename}</strong>
-                                <div style="font-size: 0.85em; color: #7f8c8d; margin-top: 3px;">
-                                    Uploaded: ${new Date(candidate.created_at).toLocaleString()}
-                                </div>
-                            </div>
-                            <span class="status-badge status-${candidate.status.toLowerCase()}">${candidate.status}</span>
-                        </div>
-                    `;
-                    container.appendChild(candidateItem);
-                });
-
-            } catch (error) {
-                console.error('Error loading candidates:', error);
-            }
-        }
-
-        // Cleanup on page unload
-        window.addEventListener('beforeunload', () => {
-            if (refreshInterval) clearInterval(refreshInterval);
-        });
     </script>
 </body>
 </html>

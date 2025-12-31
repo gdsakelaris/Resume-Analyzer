@@ -1,14 +1,24 @@
 """
-Celery tasks for resume processing.
+Starscreen Resume Parsing Engine.
 
-These tasks handle the resume processing pipeline:
-1. PDF text extraction (parse_resume_task)
-2. PII anonymization (future)
-3. AI-powered candidate scoring (future)
+This module handles the first stage of the Starscreen processing pipeline:
+1. Document text extraction from PDF, DOC, and DOCX files (parse_resume_task)
+2. Chains to AI scoring task (scoring_tasks.score_candidate_task)
+
+Supported formats:
+- PDF: Parsed with pdfplumber
+- DOCX: Parsed with python-docx and docx2txt
+- DOC: Legacy format - users should convert to DOCX or PDF
+
+Future enhancements:
+- PII anonymization for blind screening
+- Structured data extraction (skills, experience, education)
 """
 
 import logging
 import pdfplumber
+import docx
+import docx2txt
 import os
 from app.core.celery_app import celery_app
 from app.core.database import SessionLocal
@@ -20,13 +30,15 @@ logger = logging.getLogger(__name__)
 @celery_app.task(name="app.tasks.resume_tasks.parse_resume_task", bind=True)
 def parse_resume_task(self, candidate_id: int):
     """
-    Starscreen Worker: Extract text from a candidate's resume PDF.
+    Starscreen Worker: Extract text from a candidate's resume (PDF, DOC, DOCX).
 
     This is the first stage in the Starscreen processing pipeline.
-    Future enhancements:
-    - PII redaction for blind screening
-    - Structured data extraction (skills, experience, education)
-    - Chain to candidate scoring task
+    After successful extraction, automatically chains to the AI scoring task.
+
+    Supports:
+    - PDF files (parsed with pdfplumber)
+    - DOCX files (parsed with python-docx/docx2txt)
+    - DOC files (legacy - prompts user to convert)
 
     Args:
         self: Celery task instance (when bind=True)
@@ -52,7 +64,7 @@ def parse_resume_task(self, candidate_id: int):
         db.commit()
         logger.info(f"[Task {self.request.id}] Candidate {candidate_id} status set to PROCESSING")
 
-        # Extract text from PDF
+        # Extract text based on file format
         # In production with S3, you would:
         # 1. Download file from S3 to temp location
         # 2. Process it
@@ -63,16 +75,36 @@ def parse_resume_task(self, candidate_id: int):
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"Resume file not found at {file_path}")
 
+        # Determine file type from extension
+        file_ext = os.path.splitext(file_path)[1].lower()
         extracted_text = ""
-        with pdfplumber.open(file_path) as pdf:
-            for page_num, page in enumerate(pdf.pages, 1):
-                text = page.extract_text()
-                if text:
-                    extracted_text += text + "\n"
-                    logger.debug(f"[Task {self.request.id}] Extracted {len(text)} chars from page {page_num}")
+
+        if file_ext == ".pdf":
+            # Extract from PDF using pdfplumber
+            with pdfplumber.open(file_path) as pdf:
+                for page_num, page in enumerate(pdf.pages, 1):
+                    text = page.extract_text()
+                    if text:
+                        extracted_text += text + "\n"
+                        logger.debug(f"[Task {self.request.id}] Extracted {len(text)} chars from page {page_num}")
+
+        elif file_ext == ".docx":
+            # Extract from DOCX using docx2txt (simpler than python-docx)
+            extracted_text = docx2txt.process(file_path)
+            logger.debug(f"[Task {self.request.id}] Extracted {len(extracted_text)} chars from DOCX")
+
+        elif file_ext == ".doc":
+            # Legacy .doc format not directly supported
+            raise ValueError(
+                "Legacy .doc format is not supported. "
+                "Please convert your resume to .docx or .pdf format and upload again."
+            )
+
+        else:
+            raise ValueError(f"Unsupported file format: {file_ext}. Only PDF, DOC, and DOCX are supported.")
 
         if not extracted_text.strip():
-            raise ValueError("No text could be extracted from this PDF. The file may be a scanned image.")
+            raise ValueError(f"No text could be extracted from this {file_ext.upper()} file. The file may be corrupted or a scanned image.")
 
         # Save extracted text and update status
         candidate.resume_text = extracted_text
@@ -85,15 +117,16 @@ def parse_resume_task(self, candidate_id: int):
             f"for Candidate {candidate_id}"
         )
 
-        # FUTURE: Chain next task in pipeline
-        # from app.tasks.scoring_tasks import evaluate_candidate_task
-        # evaluate_candidate_task.delay(candidate_id)
+        # Chain to scoring task - Starscreen pipeline stage 2
+        from app.tasks.scoring_tasks import score_candidate_task
+        score_candidate_task.delay(candidate_id)
+        logger.info(f"[Task {self.request.id}] Queued scoring task for Candidate {candidate_id}")
 
         return {
             "status": "success",
             "candidate_id": candidate_id,
             "text_length": len(extracted_text),
-            "message": "Resume parsed successfully"
+            "message": "Resume parsed successfully, scoring queued"
         }
 
     except FileNotFoundError as e:

@@ -44,7 +44,7 @@ async def upload_resume(
     - Returns immediately with tracking ID
 
     Flow:
-    1. Validate file type (PDF only)
+    1. Validate file type (PDF, DOC, DOCX)
     2. Save file securely (UUID-based naming to prevent path traversal)
     3. Create database record with status=UPLOADED
     4. Queue parsing task to Celery worker
@@ -52,7 +52,7 @@ async def upload_resume(
 
     Args:
         job_id: The job posting ID this candidate is applying for
-        file: PDF resume file
+        file: Resume file (PDF, DOC, or DOCX)
         first_name: Optional candidate first name (can be null for blind screening)
         last_name: Optional candidate last name (can be null for blind screening)
         email: Optional candidate email (can be null for blind screening)
@@ -61,7 +61,7 @@ async def upload_resume(
         dict: Candidate ID, status, and confirmation message
 
     Raises:
-        HTTPException 400: If file is not a PDF
+        HTTPException 400: If file is not PDF, DOC, or DOCX
         HTTPException 404: If job doesn't exist
     """
     from app.models.job import Job
@@ -71,11 +71,20 @@ async def upload_resume(
     if not job:
         raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
 
-    # 2. Validate file type
-    if file.content_type != "application/pdf":
+    # 2. Validate file type (PDF, DOC, DOCX)
+    ALLOWED_CONTENT_TYPES = {
+        "application/pdf",
+        "application/msword",  # .doc
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"  # .docx
+    }
+    ALLOWED_EXTENSIONS = {".pdf", ".doc", ".docx"}
+
+    file_ext = os.path.splitext(file.filename)[1].lower()
+
+    if file.content_type not in ALLOWED_CONTENT_TYPES and file_ext not in ALLOWED_EXTENSIONS:
         raise HTTPException(
             status_code=400,
-            detail=f"Only PDF files are supported. Received: {file.content_type}"
+            detail=f"Only PDF, DOC, and DOCX files are supported. Received: {file.content_type}"
         )
 
     # 3. Save file securely with UUID-based naming
@@ -138,7 +147,7 @@ async def bulk_upload_resumes(
     db: Session = Depends(get_db)
 ):
     """
-    Upload a ZIP file containing multiple PDF resumes.
+    Upload a ZIP file containing multiple resumes (PDF, DOC, DOCX).
 
     This is the KILLER FEATURE for B2B sales:
     - Recruiters export 50+ resumes as ZIP from LinkedIn/Greenhouse
@@ -150,14 +159,14 @@ async def bulk_upload_resumes(
 
     Flow:
     1. Validate ZIP file format
-    2. Extract all PDFs from ZIP (skip folders, non-PDFs, __MACOSX)
-    3. Create candidate record for each PDF
+    2. Extract all resumes from ZIP (skip folders, non-resume files, __MACOSX)
+    3. Create candidate record for each resume
     4. Queue parsing task for each candidate
     5. Return summary of processed candidates
 
     Args:
         job_id: The job posting ID these candidates are applying for
-        file: ZIP archive containing PDF resumes
+        file: ZIP archive containing resume files (PDF, DOC, DOCX)
 
     Returns:
         dict: Summary with count of processed candidates and job_id
@@ -204,26 +213,29 @@ async def bulk_upload_resumes(
     processed_count = 0
     skipped_count = 0
 
-    # 4. Extract and process PDFs from ZIP
+    # 4. Extract and process resume files from ZIP
+    ALLOWED_EXTENSIONS = ('.pdf', '.doc', '.docx')
     try:
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
             for filename in zip_ref.namelist():
-                # Skip folders and non-PDFs
+                # Skip folders and non-resume files
                 # Also skip macOS metadata folders (.__MACOSX, .DS_Store)
+                filename_lower = filename.lower()
                 if (filename.startswith("__") or
                     filename.startswith(".") or
                     filename.endswith("/") or
-                    not filename.lower().endswith(".pdf")):
-                    logger.debug(f"Skipping non-PDF file: {filename}")
+                    not filename_lower.endswith(ALLOWED_EXTENSIONS)):
+                    logger.debug(f"Skipping non-resume file: {filename}")
                     skipped_count += 1
                     continue
 
-                # Extract single PDF
+                # Extract single resume file
                 try:
                     source = zip_ref.open(filename)
 
-                    # Create unique filename for this PDF
-                    unique_filename = f"{uuid.uuid4()}.pdf"
+                    # Create unique filename with original extension
+                    file_ext = os.path.splitext(filename)[1]
+                    unique_filename = f"{uuid.uuid4()}{file_ext}"
                     target_path = os.path.join(UPLOAD_DIR, unique_filename)
 
                     with open(target_path, "wb") as target:
@@ -361,6 +373,51 @@ def list_candidates(
 
     candidates = query.offset(skip).limit(limit).all()
     return candidates
+
+
+@router.get("/{candidate_id}/file")
+def get_candidate_file(
+    job_id: int,
+    candidate_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Download or view a candidate's resume file.
+
+    Args:
+        job_id: The job posting ID
+        candidate_id: The candidate ID
+
+    Returns:
+        FileResponse: The resume file
+
+    Raises:
+        HTTPException 404: If candidate not found or file doesn't exist
+    """
+    from fastapi.responses import FileResponse
+
+    candidate = db.query(Candidate).filter(
+        Candidate.id == candidate_id,
+        Candidate.job_id == job_id
+    ).first()
+
+    if not candidate:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Candidate {candidate_id} not found for job {job_id}"
+        )
+
+    if not os.path.exists(candidate.file_path):
+        raise HTTPException(
+            status_code=404,
+            detail=f"Resume file not found for candidate {candidate_id}"
+        )
+
+    return FileResponse(
+        path=candidate.file_path,
+        filename=candidate.original_filename,
+        media_type="application/octet-stream"
+    )
 
 
 @router.delete("/{candidate_id}", status_code=204)
