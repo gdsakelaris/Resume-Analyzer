@@ -42,8 +42,8 @@
     <nav class="bg-white border-b border-slate-200 sticky top-0 z-50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16">
-                <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center text-white font-bold text-lg shadow-sm">S</div>
+                <div class="flex items-center gap-1">
+                    <img src="/images/Logo.png" alt="Starscreen Logo" class="w-10 h-10">
                     <span class="font-bold text-xl tracking-tight text-slate-800">Starscreen</span>
                 </div>
                 <div class="flex items-center">
@@ -89,20 +89,57 @@
                         </template>
 
                         <template x-for="job in jobs" :key="job.id">
-                            <div @click="selectJob(job)" 
-                                 class="group cursor-pointer p-4 rounded-lg transition-all duration-200 border border-transparent hover:border-brand-200 hover:shadow-md"
+                            <div @click.self="selectJob(job)"
+                                 class="group cursor-pointer p-4 rounded-lg transition-all duration-200 border border-transparent hover:border-brand-200 hover:shadow-md relative"
                                  :class="selectedJob?.id === job.id ? 'bg-brand-50 border-brand-200 ring-1 ring-brand-200' : 'bg-white hover:bg-slate-50'">
                                 <div class="flex justify-between items-start mb-1">
-                                    <h3 class="font-semibold text-slate-900 group-hover:text-brand-700 transition-colors" x-text="job.title"></h3>
-                                    <span x-show="job.status !== 'COMPLETED'" class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
-                                          :class="{
-                                              'bg-yellow-100 text-yellow-800': job.status === 'PENDING',
-                                              'bg-blue-100 text-blue-800': job.status === 'PROCESSING',
-                                              'bg-red-100 text-red-800': job.status === 'FAILED'
-                                          }" x-text="job.status"></span>
+                                    <h3 @click="selectJob(job)" class="font-semibold text-slate-900 group-hover:text-brand-700 transition-colors flex-1" x-text="job.title"></h3>
+                                    <div class="flex items-center gap-2">
+                                        <span x-show="job.status !== 'COMPLETED'" class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                                              :class="{
+                                                  'bg-yellow-100 text-yellow-800': job.status === 'PENDING',
+                                                  'bg-blue-100 text-blue-800': job.status === 'PROCESSING',
+                                                  'bg-red-100 text-red-800': job.status === 'FAILED'
+                                              }" x-text="job.status"></span>
+                                        <!-- 3-dot menu button -->
+                                        <button @click.stop="openJobMenuId = openJobMenuId === job.id ? null : job.id"
+                                                class="p-1 rounded hover:bg-slate-200 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <svg class="w-5 h-5 text-slate-600" fill="currentColor" viewBox="0 0 24 24">
+                                                <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+
+                                    <!-- Context menu dropdown -->
+                                    <div x-show="openJobMenuId === job.id" @click.outside="openJobMenuId = null"
+                                         class="absolute right-4 top-12 w-48 bg-white rounded-lg shadow-lg border py-1 z-10">
+                                        <button @click.stop="viewJobDescription(job); openJobMenuId = null"
+                                                class="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                            </svg>
+                                            View Description
+                                        </button>
+                                        <button @click.stop="editJob(job); openJobMenuId = null"
+                                                class="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                            </svg>
+                                            Edit
+                                        </button>
+                                        <div class="border-t border-slate-200 my-1"></div>
+                                        <button @click.stop="openDeleteJobModal(job); openJobMenuId = null"
+                                                class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                            </svg>
+                                            Delete
+                                        </button>
+                                    </div>
                                 </div>
-                                <p class="text-xs text-slate-500 line-clamp-2" x-text="job.description"></p>
-                                <div class="mt-3 flex items-center gap-2 text-xs text-slate-400">
+                                <p @click="selectJob(job)" class="text-xs text-slate-500 line-clamp-2" x-text="job.description"></p>
+                                <div @click="selectJob(job)" class="mt-3 flex items-center gap-2 text-xs text-slate-400">
                                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                                     <span x-text="new Date(job.created_at).toLocaleDateString()"></span>
                                 </div>
@@ -124,18 +161,14 @@
 
                 <div x-show="selectedJob" class="h-full flex flex-col gap-6" x-cloak>
                     
-                    <div class="grid grid-cols-3 gap-4">
+                    <div class="grid grid-cols-2 gap-4">
                         <div class="bg-white p-5 rounded-xl border border-slate-100 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)]">
                             <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Candidates</p>
                             <p class="text-3xl font-bold text-slate-900 mt-1" x-text="candidates.length"></p>
                         </div>
                         <div class="bg-white p-5 rounded-xl border border-slate-100 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)]">
                             <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">AI Screened</p>
-                            <p class="text-3xl font-bold text-brand-600 mt-1" x-text="candidates.filter(c => c.status === 'PARSED' || c.status === 'SCORED').length"></p>
-                        </div>
-                        <div class="bg-white p-5 rounded-xl border border-slate-100 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)]">
-                            <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Processing</p>
-                            <p class="text-3xl font-bold text-blue-600 mt-1" x-text="candidates.filter(c => c.status === 'PROCESSING').length"></p>
+                            <p class="text-3xl font-bold text-brand-600 mt-1" x-text="candidates.filter(c => c.status === 'SCORED').length"></p>
                         </div>
                     </div>
 
@@ -153,10 +186,10 @@
                                         <svg class="mx-auto h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                                         </svg>
-                                        <p class="mt-2 text-sm text-white font-medium">Upload Resume</p>
-                                        <p class="text-xs text-brand-100 mt-1">(PDF, DOC, DOCX)</p>
+                                        <p class="mt-2 text-sm text-white font-medium">Upload Resumes</p>
+                                        <p class="text-xs text-brand-100 mt-1">(Select multiple files)</p>
                                     </div>
-                                    <input type="file" class="hidden" accept=".pdf,.doc,.docx" @change="uploadFile($event, 'single')">
+                                    <input type="file" class="hidden" accept=".pdf,.doc,.docx" multiple @change="uploadFile($event, 'single')">
                                 </label>
 
                                 <label class="flex-1 group relative flex flex-col items-center justify-center p-6 bg-brand-600 hover:bg-brand-700 rounded-xl transition-all cursor-pointer shadow-sm">
@@ -195,9 +228,9 @@
                                            @change="toggleSelectAll($event)"
                                            :checked="selectedCandidates.length > 0 && selectedCandidates.length === candidates.length">
                                 </div>
-                                <div class="col-span-4">Candidate</div>
-                                <div class="col-span-3">Status</div>
-                                <div class="col-span-3 text-right">Added</div>
+                                <div class="col-span-6">Candidate</div>
+                                <div class="col-span-2">Status</div>
+                                <div class="col-span-2 text-right">Added</div>
                                 <div class="col-span-1"></div>
                             </div>
 
@@ -214,7 +247,7 @@
                                                    :checked="selectedCandidates.includes(c.id)"
                                                    @change="toggleCandidate(c.id)">
                                         </div>
-                                        <div class="col-span-4 flex items-center gap-3">
+                                        <div class="col-span-6 flex items-center gap-3">
                                             <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 text-xs font-bold">
                                                 <span x-text="c.original_filename.substring(0,2).toUpperCase()"></span>
                                             </div>
@@ -223,25 +256,33 @@
                                                 <p x-show="c.status === 'FAILED' && c.error_message" class="text-xs text-red-600 truncate mt-0.5" x-text="c.error_message"></p>
                                             </div>
                                         </div>
-                                        <div class="col-span-3">
+                                        <div class="col-span-2 flex items-center gap-2">
                                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
                                                 :class="{
                                                     'bg-slate-100 text-slate-800': c.status === 'UPLOADED',
                                                     'bg-blue-50 text-blue-700': c.status === 'PROCESSING',
-                                                    'bg-green-50 text-green-700': c.status === 'PARSED' || c.status === 'SCORED',
+                                                    'bg-purple-50 text-purple-700': c.status === 'PARSED',
+                                                    'bg-green-50 text-green-700': c.status === 'SCORED',
                                                     'bg-red-50 text-red-700': c.status === 'FAILED'
                                                 }">
                                                 <span class="w-1.5 h-1.5 rounded-full mr-1.5"
                                                     :class="{
                                                         'bg-slate-400': c.status === 'UPLOADED',
                                                         'bg-blue-500': c.status === 'PROCESSING',
-                                                        'bg-green-500': c.status === 'PARSED' || c.status === 'SCORED',
+                                                        'bg-purple-500': c.status === 'PARSED',
+                                                        'bg-green-500': c.status === 'SCORED',
                                                         'bg-red-500': c.status === 'FAILED'
                                                     }"></span>
                                                 <span x-text="c.status"></span>
                                             </span>
+
+                                            <template x-if="c.score">
+                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-900 text-white shadow-sm">
+                                                    <span x-text="Math.round(c.score)"></span>%
+                                                </span>
+                                            </template>
                                         </div>
-                                        <div class="col-span-3 text-right text-xs text-slate-400">
+                                        <div class="col-span-2 text-right text-xs text-slate-400">
                                             <span x-text="new Date(c.created_at).toLocaleDateString()"></span>
                                         </div>
                                         <div class="col-span-1 flex items-center justify-center relative">
@@ -255,6 +296,29 @@
                                             <div x-show="menuOpen"
                                                  x-transition
                                                  class="absolute right-0 top-8 w-48 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-10">
+                                                <button @click="viewCandidateDetails(c); menuOpen = false"
+                                                        class="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                                    </svg>
+                                                    View Analysis
+                                                </button>
+                                                <button @click="viewContactInfo(c); menuOpen = false"
+                                                        class="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                                                    </svg>
+                                                    View Contact
+                                                </button>
+                                                <button @click="downloadFile(c); menuOpen = false"
+                                                        class="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                                                    </svg>
+                                                    Download File
+                                                </button>
+                                                <div class="border-t border-slate-200 my-1"></div>
                                                 <button @click="deleteSingleCandidate(c); menuOpen = false"
                                                         class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
                                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -268,6 +332,138 @@
                                 </template>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div x-show="candidateDetail.visible" class="fixed inset-0 z-50 overflow-y-auto" x-cloak>
+            <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                <div x-show="candidateDetail.visible" x-transition.opacity class="fixed inset-0 bg-slate-900 bg-opacity-75 transition-opacity" @click="candidateDetail.visible = false"></div>
+
+                <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+                <div x-show="candidateDetail.visible" x-transition.scale
+                     class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl w-full">
+                    <div class="bg-white px-6 pt-6 pb-4">
+                        <div class="flex items-start justify-between mb-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-12 h-12 rounded-full bg-brand-100 flex items-center justify-center text-brand-600 text-lg font-bold">
+                                    <span x-text="candidateDetail.data?.original_filename?.substring(0,2).toUpperCase()"></span>
+                                </div>
+                                <div>
+                                    <h3 class="text-xl font-semibold text-slate-900" x-text="candidateDetail.data?.original_filename"></h3>
+                                    <p class="text-sm text-slate-500" x-text="'Uploaded ' + new Date(candidateDetail.data?.created_at).toLocaleDateString()"></p>
+                                </div>
+                            </div>
+                            <button @click="candidateDetail.visible = false" class="text-slate-400 hover:text-slate-500">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        </div>
+
+                        <template x-if="candidateDetail.data?.score">
+                            <div class="bg-slate-50 rounded-lg p-4 mb-4">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-sm font-medium text-slate-700">Match Score</span>
+                                    <span class="text-3xl font-bold text-brand-600" x-text="Math.round(candidateDetail.data.score) + '%'"></span>
+                                </div>
+                                <div class="w-full bg-slate-200 rounded-full h-2">
+                                    <div class="bg-brand-600 h-2 rounded-full transition-all" :style="`width: ${candidateDetail.data.score}%`"></div>
+                                </div>
+                            </div>
+                        </template>
+
+                        <template x-if="candidateDetail.evaluation">
+                            <div class="space-y-4">
+                                <div>
+                                    <h4 class="text-sm font-semibold text-slate-900 mb-2">Summary</h4>
+                                    <p class="text-sm text-slate-600" x-text="candidateDetail.evaluation.summary"></p>
+                                </div>
+
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <h4 class="text-sm font-semibold text-green-900 mb-2 flex items-center gap-1">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                            </svg>
+                                            Strengths
+                                        </h4>
+                                        <ul class="space-y-1">
+                                            <template x-for="pro in candidateDetail.evaluation.pros" :key="pro">
+                                                <li class="text-sm text-slate-600 flex items-start gap-2">
+                                                    <span class="text-green-500 mt-0.5">•</span>
+                                                    <span x-text="pro"></span>
+                                                </li>
+                                            </template>
+                                        </ul>
+                                    </div>
+
+                                    <div>
+                                        <h4 class="text-sm font-semibold text-orange-900 mb-2 flex items-center gap-1">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                                            </svg>
+                                            Areas for Consideration
+                                        </h4>
+                                        <ul class="space-y-1">
+                                            <template x-for="con in candidateDetail.evaluation.cons" :key="con">
+                                                <li class="text-sm text-slate-600 flex items-start gap-2">
+                                                    <span class="text-orange-500 mt-0.5">•</span>
+                                                    <span x-text="con"></span>
+                                                </li>
+                                            </template>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <div x-show="Object.keys(candidateDetail.evaluation.category_scores || {}).length > 0">
+                                    <h4 class="text-sm font-semibold text-slate-900 mb-3">
+                                        Category Scores
+                                        <span class="text-xs font-normal text-slate-500 ml-2">(with AI reasoning)</span>
+                                    </h4>
+                                    <div class="space-y-3">
+                                        <template x-for="[category, data] in Object.entries(candidateDetail.evaluation.category_scores || {})" :key="category">
+                                            <div class="bg-slate-50 rounded-lg p-3 border border-slate-100">
+                                                <div class="flex justify-between items-center mb-2">
+                                                    <span class="text-sm font-semibold text-slate-800" x-text="category"></span>
+                                                    <span class="text-lg font-bold text-brand-600"
+                                                          x-text="(typeof data === 'object' ? Math.round(data.score) : Math.round(data)) + '%'"></span>
+                                                </div>
+                                                <div class="w-full bg-slate-200 rounded-full h-2 mb-2">
+                                                    <div class="bg-brand-500 h-2 rounded-full transition-all"
+                                                         :style="`width: ${typeof data === 'object' ? data.score : data}%`"></div>
+                                                </div>
+                                                <p x-show="typeof data === 'object' && data.reasoning"
+                                                   class="text-xs text-slate-600 leading-relaxed"
+                                                   x-text="data.reasoning"></p>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+
+                        <template x-if="!candidateDetail.evaluation && candidateDetail.data?.status === 'SCORED'">
+                            <div class="text-center py-8 text-slate-400">Loading evaluation...</div>
+                        </template>
+
+                        <template x-if="candidateDetail.data?.status !== 'SCORED'">
+                            <div class="text-center py-8">
+                                <div class="text-slate-400 text-sm" x-text="`Status: ${candidateDetail.data?.status}`"></div>
+                                <p class="text-slate-500 text-sm mt-2">This candidate has not been scored yet.</p>
+                            </div>
+                        </template>
+                    </div>
+
+                    <div class="bg-slate-50 px-6 py-4 flex justify-end gap-3">
+                        <button @click="downloadFile(candidateDetail.data)" class="px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50">
+                            Download Resume
+                        </button>
+                        <button @click="candidateDetail.visible = false" class="px-4 py-2 bg-brand-600 rounded-lg text-sm font-medium text-white hover:bg-brand-700">
+                            Close
+                        </button>
                     </div>
                 </div>
             </div>
@@ -302,6 +498,121 @@
                             <span x-show="isCreating">Creating...</span>
                         </button>
                         <button type="button" @click="showCreateModal = false" class="mt-3 w-full inline-flex justify-center rounded-md border border-slate-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-slate-700 hover:bg-slate-50 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div x-show="showEditJobModal" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="edit-modal-title" role="dialog" aria-modal="true" x-cloak>
+            <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                <div x-show="showEditJobModal" x-transition.opacity class="fixed inset-0 bg-slate-900 bg-opacity-75 transition-opacity" @click="showEditJobModal = false"></div>
+
+                <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+                <div x-show="showEditJobModal" x-transition.scale
+                     class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg w-full">
+                    <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                        <h3 class="text-lg leading-6 font-medium text-slate-900" id="edit-modal-title">Edit Position</h3>
+                        <div class="mt-4 space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700">Job Title</label>
+                                <input type="text" x-model="editJobData.title" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 sm:text-sm p-2 border">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700">Description</label>
+                                <textarea x-model="editJobData.description" rows="4" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 sm:text-sm p-2 border"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-slate-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                        <button type="button" @click="saveJobEdit()" :disabled="isEditing"
+                                class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-brand-600 text-base font-medium text-white hover:bg-brand-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50">
+                            <span x-show="!isEditing">Save Changes</span>
+                            <span x-show="isEditing">Saving...</span>
+                        </button>
+                        <button type="button" @click="showEditJobModal = false" class="mt-3 w-full inline-flex justify-center rounded-md border border-slate-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-slate-700 hover:bg-slate-50 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- View Job Description Modal -->
+        <div x-show="viewJobDescriptionModal.visible" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="view-description-modal-title" role="dialog" aria-modal="true" x-cloak>
+            <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                <div x-show="viewJobDescriptionModal.visible" x-transition.opacity
+                     class="fixed inset-0 bg-slate-900 bg-opacity-75 transition-opacity"
+                     @click="viewJobDescriptionModal.visible = false"></div>
+
+                <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+                <div x-show="viewJobDescriptionModal.visible" x-transition.scale
+                     class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl w-full">
+                    <div class="bg-white px-6 pt-6 pb-4">
+                        <div class="flex items-start justify-between mb-4">
+                            <h3 class="text-xl font-semibold text-slate-900" id="view-description-modal-title" x-text="viewJobDescriptionModal.job?.title"></h3>
+                            <button @click="viewJobDescriptionModal.visible = false" class="text-slate-400 hover:text-slate-500">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        </div>
+
+                        <div class="mt-4">
+                            <h4 class="text-sm font-semibold text-slate-700 mb-2">Job Description</h4>
+                            <div class="bg-slate-50 rounded-lg p-4 max-h-96 overflow-y-auto">
+                                <p class="text-sm text-slate-600 whitespace-pre-wrap" x-text="viewJobDescriptionModal.job?.description"></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-50 px-6 py-4 flex justify-end">
+                        <button @click="viewJobDescriptionModal.visible = false"
+                                class="px-4 py-2 bg-brand-600 rounded-lg text-sm font-medium text-white hover:bg-brand-700">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div x-show="deleteJobConfirm.visible" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="delete-job-modal-title" role="dialog" aria-modal="true" x-cloak>
+            <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                <div x-show="deleteJobConfirm.visible" x-transition.opacity class="fixed inset-0 bg-slate-900 bg-opacity-75 transition-opacity" @click="deleteJobConfirm.visible = false"></div>
+
+                <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+                <div x-show="deleteJobConfirm.visible" x-transition.scale
+                     class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg w-full">
+                    <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                        <div class="sm:flex sm:items-start">
+                            <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+                                <svg class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                            </div>
+                            <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                                <h3 class="text-lg leading-6 font-medium text-slate-900" id="delete-job-modal-title">Delete Position</h3>
+                                <div class="mt-2">
+                                    <p class="text-sm text-slate-500">
+                                        Are you sure you want to delete
+                                        <span class="font-semibold text-slate-900" x-text="deleteJobConfirm.job?.title"></span>?
+                                        This will also delete all associated candidates and their files. This action cannot be undone.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-slate-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                        <button type="button" @click="confirmJobDelete()"
+                                class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm">
+                            Delete
+                        </button>
+                        <button type="button" @click="deleteJobConfirm.visible = false"
+                                class="mt-3 w-full inline-flex justify-center rounded-md border border-slate-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-slate-700 hover:bg-slate-50 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
                             Cancel
                         </button>
                     </div>
@@ -353,6 +664,92 @@
             </div>
         </div>
 
+        <div x-show="contactInfo.visible" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="contact-modal-title" role="dialog" aria-modal="true" x-cloak>
+            <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                <div x-show="contactInfo.visible" x-transition.opacity class="fixed inset-0 bg-slate-900 bg-opacity-75 transition-opacity" @click="contactInfo.visible = false"></div>
+
+                <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+                <div x-show="contactInfo.visible" x-transition.scale
+                     class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-md w-full">
+                    <div class="bg-white px-6 pt-6 pb-4">
+                        <div class="flex items-start justify-between mb-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-12 h-12 rounded-full bg-brand-100 flex items-center justify-center text-brand-600">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 class="text-xl font-semibold text-slate-900" id="contact-modal-title">Contact Information</h3>
+                                    <p class="text-sm text-slate-500" x-text="contactInfo.candidate?.original_filename"></p>
+                                </div>
+                            </div>
+                            <button @click="contactInfo.visible = false" class="text-slate-400 hover:text-slate-500">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        </div>
+
+                        <template x-if="contactInfo.candidate?.first_name || contactInfo.candidate?.last_name || contactInfo.candidate?.email">
+                            <div class="space-y-4">
+                                <template x-if="contactInfo.candidate?.first_name || contactInfo.candidate?.last_name">
+                                    <div class="bg-slate-50 rounded-lg p-4">
+                                        <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1">Full Name</label>
+                                        <p class="text-base font-medium text-slate-900">
+                                            <span x-text="contactInfo.candidate?.first_name || ''"></span>
+                                            <span x-text="contactInfo.candidate?.last_name || ''"></span>
+                                        </p>
+                                    </div>
+                                </template>
+
+                                <template x-if="contactInfo.candidate?.email">
+                                    <div class="bg-slate-50 rounded-lg p-4">
+                                        <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1">Email Address</label>
+                                        <a :href="'mailto:' + contactInfo.candidate?.email"
+                                           class="text-base font-medium text-brand-600 hover:text-brand-700 flex items-center gap-2">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                                            </svg>
+                                            <span x-text="contactInfo.candidate?.email"></span>
+                                        </a>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+
+                        <template x-if="!contactInfo.candidate?.first_name && !contactInfo.candidate?.last_name && !contactInfo.candidate?.email">
+                            <div class="text-center py-8">
+                                <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                                    <svg class="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                </div>
+                                <h4 class="text-sm font-medium text-slate-900 mb-1">No Contact Information</h4>
+                                <p class="text-sm text-slate-500">This resume was uploaded with blind screening enabled. Contact details are not available.</p>
+                            </div>
+                        </template>
+                    </div>
+
+                    <div class="bg-slate-50 px-6 py-4 flex justify-end gap-3">
+                        <template x-if="contactInfo.candidate?.email">
+                            <a :href="'mailto:' + contactInfo.candidate?.email"
+                               class="px-4 py-2 bg-brand-600 rounded-lg text-sm font-medium text-white hover:bg-brand-700 inline-flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                                </svg>
+                                Send Email
+                            </a>
+                        </template>
+                        <button @click="contactInfo.visible = false" class="px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </main>
 
     <script>
@@ -364,15 +761,26 @@
                 candidates: [],
                 selectedJob: null,
                 showCreateModal: false,
+                showEditJobModal: false,
                 isCreating: false,
+                isEditing: false,
                 newJob: { title: '', description: '' },
+                editJobData: { id: null, title: '', description: '' },
                 toast: { visible: false, message: '', type: 'info' },
                 refreshInterval: null,
+                jobRefreshInterval: null,
                 deleteConfirm: { visible: false, candidates: [] },
+                deleteJobConfirm: { visible: false, job: null },
                 selectedCandidates: [],
+                candidateDetail: { visible: false, data: null, evaluation: null },
+                contactInfo: { visible: false, candidate: null },
+                viewJobDescriptionModal: { visible: false, job: null },
+                openJobMenuId: null,
 
                 init() {
                     this.loadJobs();
+                    // Auto-refresh jobs every 3 seconds to update status badges
+                    this.jobRefreshInterval = setInterval(() => this.loadJobs(), 3000);
                 },
 
                 showToast(msg, type = 'info') {
@@ -413,6 +821,85 @@
                     }
                 },
 
+                viewJobDescription(job) {
+                    this.viewJobDescriptionModal = { visible: true, job: job };
+                },
+
+                editJob(job) {
+                    this.editJobData = {
+                        id: job.id,
+                        title: job.title,
+                        description: job.description
+                    };
+                    this.showEditJobModal = true;
+                },
+
+                async saveJobEdit() {
+                    if (!this.editJobData.title || !this.editJobData.description) return;
+                    this.isEditing = true;
+                    try {
+                        const res = await fetch(`${API_BASE}/jobs/${this.editJobData.id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                title: this.editJobData.title,
+                                description: this.editJobData.description
+                            })
+                        });
+                        if (res.ok) {
+                            const updatedJob = await res.json();
+                            await this.loadJobs();
+                            // Update selectedJob if it's the one being edited
+                            if (this.selectedJob && this.selectedJob.id === this.editJobData.id) {
+                                this.selectedJob = updatedJob;
+                            }
+                            this.showEditJobModal = false;
+                            this.showToast('Position updated successfully', 'success');
+                        }
+                    } catch (e) {
+                        this.showToast('Error updating job', 'error');
+                    } finally {
+                        this.isEditing = false;
+                    }
+                },
+
+                openDeleteJobModal(job) {
+                    this.deleteJobConfirm = { visible: true, job: job };
+                },
+
+                async confirmJobDelete() {
+                    const jobId = this.deleteJobConfirm.job.id;
+                    try {
+                        const res = await fetch(`${API_BASE}/jobs/${jobId}`, {
+                            method: 'DELETE'
+                        });
+                        if (res.ok) {
+                            // Clear selection if deleting the selected job
+                            if (this.selectedJob && this.selectedJob.id === jobId) {
+                                this.selectedJob = null;
+                                this.candidates = [];
+                                if (this.refreshInterval) {
+                                    clearInterval(this.refreshInterval);
+                                    this.refreshInterval = null;
+                                }
+                            }
+                            await this.loadJobs();
+                            this.showToast('Position deleted successfully', 'success');
+                        } else {
+                            // Handle non-ok responses (404, 500, etc.)
+                            const error = await res.text();
+                            console.error('Delete failed:', error);
+                            this.showToast('Failed to delete position', 'error');
+                        }
+                    } catch (e) {
+                        console.error('Delete error:', e);
+                        this.showToast('Error deleting job', 'error');
+                    } finally {
+                        // Always close the modal, even on error
+                        this.deleteJobConfirm = { visible: false, job: null };
+                    }
+                },
+
                 selectJob(job) {
                     this.selectedJob = job;
                     this.selectedCandidates = [];
@@ -427,8 +914,18 @@
                     try {
                         const res = await fetch(`${API_BASE}/jobs/${this.selectedJob.id}/candidates/`);
                         this.candidates = await res.json();
-                        // Sort by ID desc
-                        this.candidates.sort((a, b) => b.id - a.id);
+                        // Sort by score (highest first), then by ID (newest first)
+                        this.candidates.sort((a, b) => {
+                            // If both have scores, sort by score descending (highest first)
+                            if (a.score !== null && b.score !== null) {
+                                return b.score - a.score;
+                            }
+                            // If only one has a score, prioritize the one with score
+                            if (a.score !== null) return -1;
+                            if (b.score !== null) return 1;
+                            // If neither has score, sort by ID descending (newest first)
+                            return b.id - a.id;
+                        });
                         // Remove deleted candidates from selection
                         const candidateIds = this.candidates.map(c => c.id);
                         this.selectedCandidates = this.selectedCandidates.filter(id => candidateIds.includes(id));
@@ -465,29 +962,70 @@
 
                 async uploadFile(event, type) {
                     if (!this.selectedJob) return;
-                    const file = event.target.files[0];
-                    if (!file) return;
+                    const files = event.target.files;
+                    if (!files || files.length === 0) return;
 
-                    const formData = new FormData();
-                    formData.append('file', file);
                     const endpoint = type === 'bulk' ? 'bulk-upload-zip' : 'upload';
 
-                    this.showToast(type === 'bulk' ? 'Processing ZIP...' : 'Uploading resume...', 'info');
+                    // For bulk ZIP, process as before (single file)
+                    if (type === 'bulk') {
+                        const formData = new FormData();
+                        formData.append('file', files[0]);
+                        this.showToast('Processing ZIP...', 'info');
 
-                    try {
-                        const res = await fetch(`${API_BASE}/jobs/${this.selectedJob.id}/candidates/${endpoint}`, {
-                            method: 'POST',
-                            body: formData
-                        });
-                        if (res.ok) {
-                            this.showToast('Upload successful', 'success');
-                            this.loadCandidates();
-                        } else {
-                            this.showToast('Upload failed', 'error');
+                        try {
+                            const res = await fetch(`${API_BASE}/jobs/${this.selectedJob.id}/candidates/${endpoint}`, {
+                                method: 'POST',
+                                body: formData
+                            });
+                            if (res.ok) {
+                                this.showToast('Upload successful', 'success');
+                                this.loadCandidates();
+                            } else {
+                                this.showToast('Upload failed', 'error');
+                            }
+                        } catch (e) {
+                            this.showToast('Upload error', 'error');
                         }
-                    } catch (e) {
-                        this.showToast('Upload error', 'error');
+                    } else {
+                        // For single uploads, handle multiple files
+                        const fileCount = files.length;
+                        this.showToast(`Uploading ${fileCount} resume${fileCount > 1 ? 's' : ''}...`, 'info');
+
+                        let successCount = 0;
+                        let failCount = 0;
+
+                        for (let i = 0; i < files.length; i++) {
+                            const formData = new FormData();
+                            formData.append('file', files[i]);
+
+                            try {
+                                const res = await fetch(`${API_BASE}/jobs/${this.selectedJob.id}/candidates/${endpoint}`, {
+                                    method: 'POST',
+                                    body: formData
+                                });
+                                if (res.ok) {
+                                    successCount++;
+                                } else {
+                                    failCount++;
+                                }
+                            } catch (e) {
+                                failCount++;
+                            }
+                        }
+
+                        // Show summary
+                        if (failCount === 0) {
+                            this.showToast(`${successCount} resume${successCount > 1 ? 's' : ''} uploaded successfully`, 'success');
+                        } else if (successCount === 0) {
+                            this.showToast(`Failed to upload ${failCount} resume${failCount > 1 ? 's' : ''}`, 'error');
+                        } else {
+                            this.showToast(`${successCount} uploaded, ${failCount} failed`, 'info');
+                        }
+
+                        this.loadCandidates();
                     }
+
                     event.target.value = ''; // Reset input
                 },
 
@@ -518,7 +1056,9 @@
                             this.loadCandidates();
                         }
                     } catch (e) {
+                        console.error('Delete candidates error:', e);
                         this.showToast('Error removing candidates', 'error');
+                        this.loadCandidates(); // Refresh list even on error
                     }
                 },
 
@@ -531,6 +1071,42 @@
                     const fileUrl = `${API_BASE}/jobs/${this.selectedJob.id}/candidates/${candidate.id}/file`;
                     window.open(fileUrl, '_blank');
                     this.showToast('Opening file...', 'info');
+                },
+
+                async viewCandidateDetails(candidate) {
+                    this.candidateDetail = { visible: true, data: candidate, evaluation: null };
+
+                    // If candidate is scored, fetch full evaluation details
+                    if (candidate.status === 'SCORED') {
+                        try {
+                            const res = await fetch(`${API_BASE}/jobs/${this.selectedJob.id}/candidates/${candidate.id}`);
+                            if (res.ok) {
+                                const fullData = await res.json();
+                                // Fetch evaluation separately if needed
+                                const evalRes = await fetch(`${API_BASE}/jobs/${this.selectedJob.id}/candidates/${candidate.id}/evaluation`);
+                                if (evalRes.ok) {
+                                    this.candidateDetail.evaluation = await evalRes.json();
+                                }
+                            }
+                        } catch (e) {
+                            console.error('Failed to load candidate details', e);
+                        }
+                    }
+                },
+
+                downloadFile(candidate) {
+                    const fileUrl = `${API_BASE}/jobs/${this.selectedJob.id}/candidates/${candidate.id}/file`;
+                    const link = document.createElement('a');
+                    link.href = fileUrl;
+                    link.download = candidate.original_filename;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    this.showToast('Downloading...', 'info');
+                },
+
+                viewContactInfo(candidate) {
+                    this.contactInfo = { visible: true, candidate: candidate };
                 }
             }
         }

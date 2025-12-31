@@ -53,6 +53,7 @@ app.add_middleware(
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/images", StaticFiles(directory="public/images"), name="images")
 
 # Include routers
 app.include_router(jobs.router, prefix=settings.API_V1_STR)

@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.crud import job as job_crud
 from app.models.job import JobStatus
-from app.schemas.job import JobCreateRequest, JobResponse, JobCreateResponse, JobStatusEnum
+from app.schemas.job import JobCreateRequest, JobUpdateRequest, JobResponse, JobCreateResponse, JobStatusEnum
 from app.tasks import job_tasks
 
 router = APIRouter(prefix="/jobs", tags=["Starscreen Jobs"])
@@ -101,6 +101,27 @@ def list_jobs(
 
     jobs = job_crud.get_multi(db, skip=skip, limit=limit, status=status_filter)
     return jobs
+
+
+@router.put("/{job_id}", response_model=JobResponse)
+def update_job(
+    job_id: int,
+    request: JobUpdateRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Update a job's basic information (title, description, location, etc).
+
+    Only the fields provided in the request will be updated.
+    Other fields will remain unchanged.
+    """
+    updated_job = job_crud.update(db, job_id, request)
+
+    if not updated_job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    logger.info(f"Updated job {job_id}")
+    return updated_job
 
 
 @router.delete("/{job_id}", status_code=204)

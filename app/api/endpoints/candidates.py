@@ -372,7 +372,25 @@ def list_candidates(
         query = query.filter(Candidate.status == status)
 
     candidates = query.offset(skip).limit(limit).all()
-    return candidates
+
+    # Populate score from evaluation relationship
+    results = []
+    for c in candidates:
+        candidate_dict = {
+            'id': c.id,
+            'job_id': c.job_id,
+            'first_name': c.first_name,
+            'last_name': c.last_name,
+            'email': c.email,
+            'original_filename': c.original_filename,
+            'status': c.status,
+            'error_message': c.error_message,
+            'created_at': c.created_at,
+            'score': c.evaluation.match_score if c.evaluation else None
+        }
+        results.append(candidate_dict)
+
+    return results
 
 
 @router.get("/{candidate_id}/file")
@@ -418,6 +436,58 @@ def get_candidate_file(
         filename=candidate.original_filename,
         media_type="application/octet-stream"
     )
+
+
+@router.get("/{candidate_id}/evaluation")
+def get_candidate_evaluation(
+    job_id: int,
+    candidate_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Get the AI evaluation for a candidate.
+
+    Args:
+        job_id: The job posting ID
+        candidate_id: The candidate ID
+
+    Returns:
+        Evaluation: The AI-generated evaluation with scores, summary, pros, and cons
+
+    Raises:
+        HTTPException 404: If candidate not found or evaluation doesn't exist
+    """
+    from app.models.evaluation import Evaluation
+
+    candidate = db.query(Candidate).filter(
+        Candidate.id == candidate_id,
+        Candidate.job_id == job_id
+    ).first()
+
+    if not candidate:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Candidate {candidate_id} not found for job {job_id}"
+        )
+
+    evaluation = db.query(Evaluation).filter(
+        Evaluation.candidate_id == candidate_id
+    ).first()
+
+    if not evaluation:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Evaluation not found for candidate {candidate_id}"
+        )
+
+    return {
+        "match_score": evaluation.match_score,
+        "category_scores": evaluation.category_scores,
+        "summary": evaluation.summary,
+        "pros": evaluation.pros,
+        "cons": evaluation.cons,
+        "created_at": evaluation.created_at
+    }
 
 
 @router.delete("/{candidate_id}", status_code=204)

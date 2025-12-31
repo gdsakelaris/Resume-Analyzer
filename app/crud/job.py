@@ -8,7 +8,7 @@ for jobs, providing a clean interface for the API layer.
 from typing import List, Optional
 from sqlalchemy.orm import Session
 from app.models.job import Job, JobStatus
-from app.schemas.job import JobCreateRequest
+from app.schemas.job import JobCreateRequest, JobUpdateRequest
 
 
 def create(db: Session, job_data: JobCreateRequest) -> Job:
@@ -136,6 +136,38 @@ def update_config(
     job.job_config = config
     job.status = JobStatus.COMPLETED
     job.error_message = None
+
+    db.commit()
+    db.refresh(job)
+
+    return job
+
+
+def update(db: Session, job_id: int, job_data: JobUpdateRequest) -> Optional[Job]:
+    """
+    Update a job's basic information (title, description, location, etc).
+
+    Args:
+        db: Database session
+        job_id: Job ID to update
+        job_data: Updated job data
+
+    Returns:
+        Updated Job instance if found, None otherwise
+    """
+    job = get_by_id(db, job_id)
+    if not job:
+        return None
+
+    # Update only provided fields
+    if job_data.title is not None:
+        job.title = job_data.title
+    if job_data.description is not None:
+        job.description = job_data.description
+    if job_data.location is not None:
+        job.location = job_data.location
+    if job_data.work_authorization_required is not None:
+        job.work_authorization_required = job_data.work_authorization_required
 
     db.commit()
     db.refresh(job)

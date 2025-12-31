@@ -44,6 +44,14 @@ class JobCreateRequest(BaseModel):
     work_authorization_required: bool = False
 
 
+class JobUpdateRequest(BaseModel):
+    """Schema for updating an existing job"""
+    title: Optional[str] = Field(None, min_length=1, max_length=200)
+    description: Optional[str] = Field(None, min_length=10)
+    location: Optional[str] = None
+    work_authorization_required: Optional[bool] = None
+
+
 class JobResponse(BaseModel):
     """Schema for job response"""
     id: int

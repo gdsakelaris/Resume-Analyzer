@@ -66,4 +66,4 @@ class Candidate(Base):
 
     # Relationships
     job = relationship("Job", back_populates="candidates")
-    evaluation = relationship("Evaluation", back_populates="candidate", uselist=False)
+    evaluation = relationship("Evaluation", back_populates="candidate", uselist=False, cascade="all, delete-orphan")

@@ -48,6 +48,8 @@ class CandidateListResponse(BaseModel):
     email: Optional[str]
     original_filename: str
     status: CandidateStatus
+    error_message: Optional[str] = None
+    score: Optional[float] = Field(None, description="AI match score (0-100) from evaluation")
     created_at: datetime
 
     class Config:
