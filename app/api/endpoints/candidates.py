@@ -382,6 +382,8 @@ def list_candidates(
             'first_name': c.first_name,
             'last_name': c.last_name,
             'email': c.email,
+            'phone': c.phone,
+            'location': c.location,
             'original_filename': c.original_filename,
             'status': c.status,
             'error_message': c.error_message,

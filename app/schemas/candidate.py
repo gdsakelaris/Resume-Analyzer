@@ -13,6 +13,8 @@ class CandidateBase(BaseModel):
     first_name: Optional[str] = Field(None, description="Candidate first name (optional for blind screening)")
     last_name: Optional[str] = Field(None, description="Candidate last name (optional for blind screening)")
     email: Optional[EmailStr] = Field(None, description="Candidate email (optional for blind screening)")
+    phone: Optional[str] = Field(None, description="Candidate phone number (optional for blind screening)")
+    location: Optional[str] = Field(None, description="Candidate location (optional for blind screening)")
 
 
 class CandidateUploadResponse(BaseModel):
@@ -46,6 +48,8 @@ class CandidateListResponse(BaseModel):
     first_name: Optional[str]
     last_name: Optional[str]
     email: Optional[str]
+    phone: Optional[str]
+    location: Optional[str]
     original_filename: str
     status: CandidateStatus
     error_message: Optional[str] = None

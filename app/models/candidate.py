@@ -43,6 +43,8 @@ class Candidate(Base):
     first_name = Column(String, nullable=True)
     last_name = Column(String, nullable=True)
     email = Column(String, nullable=True)
+    phone = Column(String, nullable=True)
+    location = Column(String, nullable=True)
 
     # File Storage
     file_path = Column(String, nullable=False)  # S3 key or local path

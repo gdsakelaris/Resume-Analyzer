@@ -3,6 +3,7 @@ Starscreen Hybrid Scoring Engine - AI Judgment + Python Math.
 
 This module implements a fundamentally superior scoring system that:
 - AI: Uses Chain-of-Thought reasoning to GRADE competence (0-100) per category
+- AI: Automatically EXTRACTS contact info (Name, Email) for the database
 - Python: Calculates deterministic weighted scores based on importance
 - Values projects, volunteer work, and implicit signals (not just keywords)
 - Detects keyword stuffing and prioritizes evidence of actual competence
@@ -34,18 +35,19 @@ client = OpenAI(api_key=settings.OPENAI_API_KEY)
 @celery_app.task(name="app.tasks.scoring_tasks.score_candidate_task", bind=True)
 def score_candidate_task(self, candidate_id: int):
     """
-    Hybrid Scoring Engine: AI Judgment + Python Math.
+    Hybrid Scoring Engine: AI Judgment + Python Math + PII Extraction.
 
     Architecture:
     1. AI: Grades each category (0-100) based on semantic evidence
-    2. Python: Calculates weighted average using importance from job_config
+    2. AI: Extracts First Name, Last Name, and Email from resume text
+    3. Python: Calculates weighted average using importance from job_config
 
     This prevents AI from hallucinating weighted math while maintaining
     semantic understanding for inferring skills from context.
 
     Flow:
-    - AI analyzes resume and grades categories
-    - Python multiplies each score by its importance weight
+    - AI analyzes resume -> returns Grades + Contact Info
+    - Python updates Candidate table with Name/Email
     - Python calculates final score = sum(score*importance) / sum(importance)
 
     Args:
@@ -78,9 +80,9 @@ def score_candidate_task(self, candidate_id: int):
         if not categories:
             logger.warning(f"[Task {self.request.id}] No categories found in job config, using default scoring")
 
-        # Build AI prompt - Focus ONLY on grading, NOT on math
+        # Build AI prompt - Focus on grading AND extraction
         prompt = f"""You are a Principal Engineer and expert Hiring Manager.
-Your goal is to GRADE a candidate's competence for each skill category.
+Your goal is to GRADE a candidate's competence for each skill category AND extract their contact information.
 
 CRITICAL INSTRUCTIONS:
 1. **Analyze Full Context:** Look at the candidate's [Projects], [Experience], [Education], [Certifications], and [Skills] sections.
@@ -90,7 +92,11 @@ CRITICAL INSTRUCTIONS:
 3. **Infer from Projects:**
    - "Built Django app" → They know Python (even if not explicitly listed)
    - "Led student group" → Leadership skills
-4. **Keyword Stuffing:** If a skill appears ONLY in a list with 50 other keywords and is totally irrelevant to their actual work, discount it slightly, but acknowledge they claimed it.
+4. **Extract PII:** Find the candidate's contact information from the header or top of the document:
+   - First Name & Last Name
+   - Email
+   - Phone Number (format as standard string if found, e.g., "(555) 123-4567" or "+1-555-123-4567")
+   - Location (City, State/Country - e.g., "San Francisco, CA" or "New York, NY" or "Remote")
 
 GRADING SCALE:
 - 0-20: No evidence found anywhere.
@@ -112,11 +118,19 @@ CANDIDATE RESUME:
 
 --------------------------------------------------------
 YOUR TASK:
-For EACH category in the Job Configuration, assign a competence_score (0-100).
-Cite specific evidence from the resume in your reasoning.
+1. Extract contact info (First Name, Last Name, Email, Phone, Location).
+2. For EACH category in the Job Configuration, assign a competence_score (0-100).
+3. Cite specific evidence from the resume in your reasoning.
 
 Output strictly valid JSON:
 {{
+    "extracted_contact_info": {{
+        "first_name": "string or null",
+        "last_name": "string or null",
+        "email": "string or null",
+        "phone": "string or null",
+        "location": "string or null"
+    }},
     "summary": "3-4 sentence professional assessment of overall fit",
     "category_scores": {{
         "Exact Category Name From Config": {{
@@ -132,11 +146,11 @@ IMPORTANT: Do NOT include a "match_score" field. Python will calculate that.
 """
 
         # Call OpenAI
-        logger.info(f"[Task {self.request.id}] Calling OpenAI for category grading")
+        logger.info(f"[Task {self.request.id}] Calling OpenAI for category grading and PII extraction")
         response = client.chat.completions.create(
             model="gpt-4o",
             messages=[
-                {"role": "system", "content": "You are a fair, rigorous evaluator. You grade competence but do NOT calculate weighted scores."},
+                {"role": "system", "content": "You are a fair, rigorous evaluator. You grade competence and extract data accurately."},
                 {"role": "user", "content": prompt}
             ],
             response_format={"type": "json_object"},
@@ -147,10 +161,29 @@ IMPORTANT: Do NOT include a "match_score" field. Python will calculate that.
         result = response.choices[0].message.content
         ai_result = json.loads(result)
 
-        logger.info(f"[Task {self.request.id}] AI grading complete, calculating weighted score...")
+        logger.info(f"[Task {self.request.id}] AI processing complete. Updating Candidate info...")
 
         # ============================================================
-        # PYTHON DOES THE MATH (Deterministic Weighted Scoring)
+        # 1. UPDATE CANDIDATE CONTACT INFO
+        # ============================================================
+        contact_info = ai_result.get("extracted_contact_info", {})
+        if contact_info:
+            # Only update fields if AI found them and they aren't already set
+            if contact_info.get("first_name") and not candidate.first_name:
+                candidate.first_name = contact_info.get("first_name")
+            if contact_info.get("last_name") and not candidate.last_name:
+                candidate.last_name = contact_info.get("last_name")
+            if contact_info.get("email") and not candidate.email:
+                candidate.email = contact_info.get("email")
+            if contact_info.get("phone") and not candidate.phone:
+                candidate.phone = contact_info.get("phone")
+            if contact_info.get("location") and not candidate.location:
+                candidate.location = contact_info.get("location")
+
+            logger.info(f"[Task {self.request.id}] Extracted contact info: {candidate.first_name} {candidate.last_name} | {candidate.phone} | {candidate.location} | {candidate.email}")
+
+        # ============================================================
+        # 2. PYTHON DOES THE MATH (Deterministic Weighted Scoring)
         # ============================================================
 
         total_weighted_score = 0.0
@@ -200,7 +233,7 @@ IMPORTANT: Do NOT include a "match_score" field. Python will calculate that.
         logger.info(f"[Task {self.request.id}] Final weighted score: {final_match_score}/100 (weighted by importance)")
 
         # ============================================================
-        # Save Evaluation to Database
+        # 3. Save Evaluation to Database
         # ============================================================
 
         # Check if evaluation already exists (for idempotency)

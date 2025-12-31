@@ -79,18 +79,35 @@ def parse_resume_task(self, candidate_id: int):
         file_ext = os.path.splitext(file_path)[1].lower()
         extracted_text = ""
 
+        # DEFINITION: 25,000 chars is roughly 6-8 pages of text.
+        # This limit optimizes token usage for OpenAI API calls while supporting comprehensive resumes.
+        MAX_PAGES = 6
+        MAX_CHARS = 25000
+
         if file_ext == ".pdf":
             # Extract from PDF using pdfplumber
             with pdfplumber.open(file_path) as pdf:
-                for page_num, page in enumerate(pdf.pages, 1):
+                # Enforce Page Limit
+                pages_to_parse = pdf.pages[:MAX_PAGES]
+
+                for page_num, page in enumerate(pages_to_parse, 1):
                     text = page.extract_text()
                     if text:
                         extracted_text += text + "\n"
+                        # Stop if we exceed char limit even within allowed pages
+                        if len(extracted_text) > MAX_CHARS:
+                            extracted_text = extracted_text[:MAX_CHARS]
+                            logger.info(f"[Task {self.request.id}] Truncated PDF at {MAX_CHARS} chars (page {page_num})")
+                            break
                         logger.debug(f"[Task {self.request.id}] Extracted {len(text)} chars from page {page_num}")
 
         elif file_ext == ".docx":
             # Extract from DOCX using docx2txt (simpler than python-docx)
-            extracted_text = docx2txt.process(file_path)
+            full_text = docx2txt.process(file_path)
+            # Enforce Character Limit
+            extracted_text = full_text[:MAX_CHARS]
+            if len(full_text) > MAX_CHARS:
+                logger.info(f"[Task {self.request.id}] Truncated DOCX from {len(full_text)} to {MAX_CHARS} chars")
             logger.debug(f"[Task {self.request.id}] Extracted {len(extracted_text)} chars from DOCX")
 
         elif file_ext == ".doc":
