@@ -16,12 +16,16 @@ class SubscriptionStatus(str, enum.Enum):
     """
     Subscription lifecycle states (mirrors Stripe subscription statuses).
 
+    - INCOMPLETE: Subscription created but payment not completed
+    - INCOMPLETE_EXPIRED: Payment was never completed
     - TRIALING: Free trial period (default for new signups)
     - ACTIVE: Paid and in good standing
     - PAST_DUE: Payment failed, grace period active
     - CANCELED: User canceled, access remains until period_end
     - UNPAID: Payment failed multiple times, access revoked
     """
+    INCOMPLETE = "incomplete"
+    INCOMPLETE_EXPIRED = "incomplete_expired"
     TRIALING = "trialing"
     ACTIVE = "active"
     PAST_DUE = "past_due"
@@ -33,17 +37,31 @@ class SubscriptionPlan(str, enum.Enum):
     """
     Available subscription plans with competitive pricing tiers.
 
-    FREE: Trial tier (5 candidates/month) - Perfect for testing
-    STARTER: Solo recruiters ($50/mo, 100 candidates/month)
-    SMALL_BUSINESS: Small teams ($100/mo, 250 candidates/month)
-    PROFESSIONAL: Growing companies ($200/mo, 1000 candidates/month)
-    ENTERPRISE: High-volume recruiting ($500/mo base + $0.50 per candidate)
+    Display Names: Free, Recruiter, Small Business, Professional, Enterprise
+
+    FREE: Trial tier (10 candidates/month) - Perfect for testing
+    STARTER (UI: "Recruiter"): Solo recruiters ($20/mo, 100 candidates/month)
+    SMALL_BUSINESS: Small teams ($149/mo, 1,000 candidates/month)
+    PROFESSIONAL: Growing companies ($399/mo, unlimited)
+    ENTERPRISE: High-volume recruiting ($500/mo base + $0.25 per candidate)
     """
     FREE = "free"
     STARTER = "starter"
     SMALL_BUSINESS = "small_business"
     PROFESSIONAL = "professional"
     ENTERPRISE = "enterprise"
+
+    @property
+    def display_name(self) -> str:
+        """Get the user-facing display name for this plan."""
+        names = {
+            SubscriptionPlan.FREE: "Free",
+            SubscriptionPlan.STARTER: "Recruiter",
+            SubscriptionPlan.SMALL_BUSINESS: "Small Business",
+            SubscriptionPlan.PROFESSIONAL: "Professional",
+            SubscriptionPlan.ENTERPRISE: "Enterprise"
+        }
+        return names.get(self, "Unknown")
 
     @property
     def monthly_limit(self) -> int:
@@ -64,9 +82,9 @@ class SubscriptionPlan(str, enum.Enum):
         """Get the monthly base price in USD for this plan."""
         prices = {
             SubscriptionPlan.FREE: 0,
-            SubscriptionPlan.STARTER: 50,
-            SubscriptionPlan.SMALL_BUSINESS: 100,
-            SubscriptionPlan.PROFESSIONAL: 200,
+            SubscriptionPlan.STARTER: 20,
+            SubscriptionPlan.SMALL_BUSINESS: 149,
+            SubscriptionPlan.PROFESSIONAL: 399,
             SubscriptionPlan.ENTERPRISE: 500  # Base fee + per-candidate pricing
         }
         return prices.get(self, 0)
@@ -75,7 +93,7 @@ class SubscriptionPlan(str, enum.Enum):
     def per_candidate_price_usd(self) -> float:
         """Get the per-candidate price in USD (only for ENTERPRISE)."""
         if self == SubscriptionPlan.ENTERPRISE:
-            return 0.50
+            return 0.25
         return 0.0
 
     @property
