@@ -58,6 +58,9 @@ class Settings(BaseSettings):
     S3_BUCKET_NAME: str = ""                    # S3 bucket name for resume storage
     USE_S3: bool = False                        # Toggle S3 vs local storage (for backward compatibility)
 
+    # Free Tier Settings
+    FREE_TIER_CANDIDATE_LIMIT: int = 10         # Monthly candidate limit for free tier
+
     # CORS Settings - can be set as JSON string in .env
     BACKEND_CORS_ORIGINS: Union[List[str], str] = ["http://localhost:3000", "http://localhost:8000"]
 

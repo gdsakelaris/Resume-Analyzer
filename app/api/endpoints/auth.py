@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.security import verify_password, get_password_hash, create_access_token, create_refresh_token, decode_token
 from app.core.deps import get_current_user
+from app.core.config import settings
 from app.models.user import User
 from app.models.subscription import Subscription, SubscriptionPlan, SubscriptionStatus
 from app.schemas.user import (
@@ -72,8 +73,8 @@ def register(
         id=uuid.uuid4(),
         user_id=new_user.id,
         plan=SubscriptionPlan.FREE,
-        status=SubscriptionStatus.TRIALING,
-        monthly_candidate_limit=5,
+        status=SubscriptionStatus.ACTIVE,  # Free tier is active (no trial period)
+        monthly_candidate_limit=settings.FREE_TIER_CANDIDATE_LIMIT,
         candidates_used_this_month=0,
     )
     db.add(subscription)

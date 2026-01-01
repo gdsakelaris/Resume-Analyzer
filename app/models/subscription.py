@@ -48,14 +48,16 @@ class SubscriptionPlan(str, enum.Enum):
     @property
     def monthly_limit(self) -> int:
         """Get the monthly candidate limit for this plan."""
+        from app.core.config import settings
+
         limits = {
-            SubscriptionPlan.FREE: 5,
+            SubscriptionPlan.FREE: settings.FREE_TIER_CANDIDATE_LIMIT,
             SubscriptionPlan.STARTER: 100,
-            SubscriptionPlan.SMALL_BUSINESS: 250,
-            SubscriptionPlan.PROFESSIONAL: 1000,
+            SubscriptionPlan.SMALL_BUSINESS: 1000,
+            SubscriptionPlan.PROFESSIONAL: 999999,  # Unlimited (represented as very large number)
             SubscriptionPlan.ENTERPRISE: 999999  # Unlimited (pay per use)
         }
-        return limits.get(self, 5)
+        return limits.get(self, settings.FREE_TIER_CANDIDATE_LIMIT)
 
     @property
     def base_price_usd(self) -> int:
@@ -105,7 +107,8 @@ class Subscription(Base):
     status = Column(Enum(SubscriptionStatus, values_callable=lambda x: [e.value for e in x]), default=SubscriptionStatus.TRIALING, nullable=False, index=True)
 
     # Usage limits (enforced by application logic)
-    monthly_candidate_limit = Column(Integer, default=5, nullable=False)  # Free tier: 5 candidates/month
+    # Note: Default value is set dynamically in registration endpoint based on settings.FREE_TIER_CANDIDATE_LIMIT
+    monthly_candidate_limit = Column(Integer, nullable=False)  # Candidate limit based on plan
     candidates_used_this_month = Column(Integer, default=0, nullable=False)
 
     # Billing cycle
