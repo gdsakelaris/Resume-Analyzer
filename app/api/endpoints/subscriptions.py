@@ -5,11 +5,11 @@ Handles subscription creation, upgrades, downgrades, and billing portal access.
 """
 
 import logging
-import stripe
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional
+import stripe as stripe_lib
 
 from app.core.config import settings
 from app.core.database import get_db
@@ -20,8 +20,8 @@ from app.models.user import User
 router = APIRouter(prefix="/subscriptions", tags=["Subscriptions"])
 logger = logging.getLogger(__name__)
 
-# Initialize Stripe
-stripe.api_key = settings.STRIPE_API_KEY
+# Initialize Stripe with proper configuration
+stripe_lib.api_key = settings.STRIPE_API_KEY
 
 
 class CreateSubscriptionRequest(BaseModel):
@@ -79,9 +79,9 @@ async def create_subscription(
             if subscription.stripe_subscription_id:
                 try:
                     # Cancel the current Stripe subscription
-                    stripe.Subscription.delete(subscription.stripe_subscription_id)
+                    stripe_lib.Subscription.delete(subscription.stripe_subscription_id)
                     logger.info(f"Cancelled existing subscription {subscription.stripe_subscription_id} for user {current_user.id}")
-                except stripe.error.StripeError as e:
+                except stripe_lib.error.StripeError as e:
                     logger.error(f"Failed to cancel existing subscription: {e}")
                     raise HTTPException(
                         status_code=400,
@@ -119,16 +119,16 @@ async def create_subscription(
         logger.info(f"Using Stripe price ID: {tier_config['price_id']}")
 
         # Ensure Stripe API key is set
-        if not stripe.api_key:
+        if not stripe_lib.api_key:
             logger.error("Stripe API key is not set!")
-            stripe.api_key = settings.STRIPE_API_KEY
-            logger.info(f"Stripe API key set: {stripe.api_key[:20] if stripe.api_key else 'NONE'}...")
+            stripe_lib.api_key = settings.STRIPE_API_KEY
+            logger.info(f"Stripe API key set: {stripe_lib.api_key[:20] if stripe_lib.api_key else 'NONE'}...")
 
         # Create or retrieve Stripe customer
         if not subscription.stripe_customer_id:
             logger.info(f"Creating new Stripe customer for {current_user.email}")
             try:
-                customer = stripe.Customer.create(
+                customer = stripe_lib.Customer.create(
                     email=current_user.email,
                     payment_method=request.payment_method_id,
                     invoice_settings={
@@ -148,19 +148,19 @@ async def create_subscription(
                 logger.info(f"Successfully saved customer ID to subscription")
             except Exception as e:
                 logger.error(f"Error in customer creation flow: {type(e).__name__}: {str(e)}")
-                logger.error(f"Stripe API key status: {stripe.api_key[:20] if stripe.api_key else 'NONE'}...")
+                logger.error(f"Stripe API key status: {stripe_lib.api_key[:20] if stripe_lib.api_key else 'NONE'}...")
                 import traceback
                 logger.error(f"Full traceback: {traceback.format_exc()}")
                 raise
         else:
             # Attach payment method to existing customer
-            stripe.PaymentMethod.attach(
+            stripe_lib.PaymentMethod.attach(
                 request.payment_method_id,
                 customer=subscription.stripe_customer_id,
             )
 
             # Set as default payment method
-            stripe.Customer.modify(
+            stripe_lib.Customer.modify(
                 subscription.stripe_customer_id,
                 invoice_settings={
                     'default_payment_method': request.payment_method_id,
@@ -170,7 +170,7 @@ async def create_subscription(
         # Create Stripe subscription (no trial - charge immediately)
         try:
             logger.info(f"Creating Stripe subscription with price: {tier_config['price_id']}, customer: {subscription.stripe_customer_id}")
-            stripe_subscription = stripe.Subscription.create(
+            stripe_subscription = stripe_lib.Subscription.create(
                 customer=subscription.stripe_customer_id,
                 items=[{
                     'price': tier_config['price_id'],
@@ -206,7 +206,7 @@ async def create_subscription(
             "monthly_candidate_limit": subscription.monthly_candidate_limit
         }
 
-    except stripe.error.StripeError as e:
+    except stripe_lib.error.StripeError as e:
         logger.error(f"Stripe error creating subscription: {e}")
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -265,14 +265,14 @@ async def create_billing_portal_session(
 
     try:
         # Create billing portal session
-        session = stripe.billing_portal.Session.create(
+        session = stripe_lib.billing_portal.Session.create(
             customer=subscription.stripe_customer_id,
             return_url=f"{settings.FRONTEND_URL}/?billing=success",
         )
 
         return {"url": session.url}
 
-    except stripe.error.StripeError as e:
+    except stripe_lib.error.StripeError as e:
         logger.error(f"Stripe error creating portal session: {e}")
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -295,7 +295,7 @@ async def cancel_subscription(
 
     try:
         # Cancel at period end (don't cancel immediately)
-        stripe_subscription = stripe.Subscription.modify(
+        stripe_subscription = stripe_lib.Subscription.modify(
             subscription.stripe_subscription_id,
             cancel_at_period_end=True
         )
@@ -307,7 +307,7 @@ async def cancel_subscription(
             "cancel_at": stripe_subscription.cancel_at
         }
 
-    except stripe.error.StripeError as e:
+    except stripe_lib.error.StripeError as e:
         logger.error(f"Stripe error canceling subscription: {e}")
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -342,10 +342,10 @@ async def upgrade_subscription(
 
     try:
         # Get current subscription from Stripe
-        stripe_sub = stripe.Subscription.retrieve(subscription.stripe_subscription_id)
+        stripe_sub = stripe_lib.Subscription.retrieve(subscription.stripe_subscription_id)
 
         # Update subscription item with new price
-        stripe.Subscription.modify(
+        stripe_lib.Subscription.modify(
             subscription.stripe_subscription_id,
             items=[{
                 'id': stripe_sub['items']['data'][0].id,
@@ -361,6 +361,6 @@ async def upgrade_subscription(
             "status": "active"
         }
 
-    except stripe.error.StripeError as e:
+    except stripe_lib.error.StripeError as e:
         logger.error(f"Stripe error upgrading subscription: {e}")
         raise HTTPException(status_code=400, detail=str(e))
