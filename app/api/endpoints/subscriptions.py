@@ -139,12 +139,18 @@ async def create_subscription(
                         'tenant_id': str(current_user.tenant_id)
                     }
                 )
-                logger.info(f"Stripe customer created, attempting to save customer ID: {customer.id}")
-                subscription.stripe_customer_id = customer.id
+                logger.info(f"Stripe customer object type: {type(customer)}")
+                logger.info(f"Stripe customer object: {customer}")
+                logger.info(f"Attempting to access customer.id...")
+                customer_id = customer.id
+                logger.info(f"Successfully accessed customer ID: {customer_id}")
+                subscription.stripe_customer_id = customer_id
                 logger.info(f"Successfully saved customer ID to subscription")
             except Exception as e:
                 logger.error(f"Error in customer creation flow: {type(e).__name__}: {str(e)}")
                 logger.error(f"Stripe API key status: {stripe.api_key[:20] if stripe.api_key else 'NONE'}...")
+                import traceback
+                logger.error(f"Full traceback: {traceback.format_exc()}")
                 raise
         else:
             # Attach payment method to existing customer
