@@ -59,6 +59,12 @@ async def create_subscription(
     Returns subscription details.
     """
     try:
+        logger.info(f"Creating subscription for user {current_user.id}, tier: {request.tier}, payment_method: {request.payment_method_id}")
+
+        # Validate payment method ID
+        if not request.payment_method_id:
+            raise HTTPException(status_code=400, detail="Payment method ID is required")
+
         # Get user's subscription
         subscription = db.query(Subscription).filter(
             Subscription.user_id == current_user.id
@@ -105,8 +111,15 @@ async def create_subscription(
         if not tier_config:
             raise HTTPException(status_code=400, detail=f"Invalid tier: {request.tier}")
 
+        # Ensure Stripe API key is set
+        if not stripe.api_key:
+            logger.error("Stripe API key is not set!")
+            stripe.api_key = settings.STRIPE_API_KEY
+            logger.info(f"Stripe API key set: {stripe.api_key[:20] if stripe.api_key else 'NONE'}...")
+
         # Create or retrieve Stripe customer
         if not subscription.stripe_customer_id:
+            logger.info(f"Creating new Stripe customer for {current_user.email}")
             customer = stripe.Customer.create(
                 email=current_user.email,
                 payment_method=request.payment_method_id,
@@ -119,6 +132,7 @@ async def create_subscription(
                 }
             )
             subscription.stripe_customer_id = customer.id
+            logger.info(f"Created Stripe customer: {customer.id}")
         else:
             # Attach payment method to existing customer
             stripe.PaymentMethod.attach(
