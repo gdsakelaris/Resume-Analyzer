@@ -35,9 +35,9 @@ class SubscriptionPlan(str, enum.Enum):
 
     FREE: Trial tier (5 candidates/month) - Perfect for testing
     STARTER: Solo recruiters ($50/mo, 100 candidates/month)
-    SMALL_BUSINESS: Small teams ($99/mo, 250 candidates/month)
+    SMALL_BUSINESS: Small teams ($100/mo, 250 candidates/month)
     PROFESSIONAL: Growing companies ($200/mo, 1000 candidates/month)
-    ENTERPRISE: High-volume recruiting ($499/mo base + $0.50 per candidate)
+    ENTERPRISE: High-volume recruiting ($500/mo base + $0.50 per candidate)
     """
     FREE = "free"
     STARTER = "starter"
@@ -63,9 +63,9 @@ class SubscriptionPlan(str, enum.Enum):
         prices = {
             SubscriptionPlan.FREE: 0,
             SubscriptionPlan.STARTER: 50,
-            SubscriptionPlan.SMALL_BUSINESS: 99,
+            SubscriptionPlan.SMALL_BUSINESS: 100,
             SubscriptionPlan.PROFESSIONAL: 200,
-            SubscriptionPlan.ENTERPRISE: 499  # Base fee + per-candidate pricing
+            SubscriptionPlan.ENTERPRISE: 500  # Base fee + per-candidate pricing
         }
         return prices.get(self, 0)
 
@@ -163,7 +163,7 @@ class Subscription(Base):
         base_cost = self.plan.base_price_usd
 
         if self.plan == SubscriptionPlan.ENTERPRISE:
-            # Enterprise: $499/mo base + $0.50 per candidate
+            # Enterprise: $500/mo base + $0.50 per candidate
             usage_cost = self.candidates_used_this_month * self.plan.per_candidate_price_usd
             return float(base_cost) + usage_cost
 

@@ -23,7 +23,7 @@ def upgrade() -> None:
     Add SMALL_BUSINESS to the subscriptionplan enum.
 
     This adds a new tier between STARTER and PROFESSIONAL
-    for small businesses ($199/mo, 100 candidates).
+    for small businesses ($100/mo, 250 candidates).
     """
     # Add the new enum value to the subscriptionplan type
     op.execute("ALTER TYPE subscriptionplan ADD VALUE IF NOT EXISTS 'small_business'")

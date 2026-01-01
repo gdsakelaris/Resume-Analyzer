@@ -57,9 +57,9 @@ current_period_end (datetime)
 **Pricing Tiers (Enforced)**:
 - **FREE**: $0/mo - 5 candidates/month (trial tier)
 - **STARTER**: $50/mo - 100 candidates/month (solo recruiters)
-- **SMALL_BUSINESS**: $99/mo - 250 candidates/month (small teams)
+- **SMALL_BUSINESS**: $100/mo - 250 candidates/month (small teams)
 - **PROFESSIONAL**: $200/mo - 1000 candidates/month (growing companies)
-- **ENTERPRISE**: $499/mo base + $0.50/candidate - Unlimited (high-volume recruiting)
+- **ENTERPRISE**: $500/mo base + $0.50/candidate - Unlimited (high-volume recruiting)
 
 ### jobs
 ```python
@@ -453,14 +453,14 @@ selectedCandidate: null,  // Candidate being viewed in modal
 |------|--------------|------------------|-------------------|---------------|
 | **FREE** | $0 | 5 | Free | Trial/Testing |
 | **STARTER** | $50 | 100 | $0.50 | Solo Recruiters |
-| **SMALL_BUSINESS** | $99 | 250 | $0.40 | Small Teams |
+| **SMALL_BUSINESS** | $100 | 250 | $0.40 | Small Teams |
 | **PROFESSIONAL** | $200 | 1,000 | $0.20 | Growing Companies |
-| **ENTERPRISE** | $499 base + $0.50/candidate | Unlimited | Variable | High-Volume |
+| **ENTERPRISE** | $500 base + $0.50/candidate | Unlimited | Variable | High-Volume |
 
 **Enterprise Billing Examples**:
-- 500 candidates: $499 + (500 × $0.50) = **$749** ($1.50/candidate)
-- 1,000 candidates: $499 + (1,000 × $0.50) = **$999** ($1.00/candidate)
-- 2,000 candidates: $499 + (2,000 × $0.50) = **$1,499** ($0.75/candidate)
+- 500 candidates: $500 + (500 × $0.50) = **$750** ($1.50/candidate)
+- 1,000 candidates: $500 + (1,000 × $0.50) = **$1,000** ($1.00/candidate)
+- 2,000 candidates: $500 + (2,000 × $0.50) = **$1,500** ($0.75/candidate)
 
 ### Enforcement Points
 
