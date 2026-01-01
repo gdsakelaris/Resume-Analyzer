@@ -157,8 +157,10 @@
                         </ul>
 
                         <button @click="selectPlan('free')"
-                            class="w-full bg-slate-100 text-slate-700 font-semibold py-3 rounded-lg hover:bg-slate-200 transition">
-                            Get Started Free
+                            :disabled="currentPlan === 'FREE'"
+                            :class="currentPlan === 'FREE' ? 'bg-slate-400 cursor-not-allowed' : 'bg-slate-100 hover:bg-slate-200'"
+                            class="w-full text-slate-700 font-semibold py-3 rounded-lg transition">
+                            <span x-text="currentPlan === 'FREE' ? 'Current Plan' : 'Get Started'"></span>
                         </button>
                     </div>
 
@@ -212,8 +214,10 @@
                         </ul>
 
                         <button @click="selectPlan('starter', billingPeriod)"
-                            class="w-full bg-white text-brand-700 font-semibold py-3 rounded-lg hover:bg-brand-50 transition">
-                            Start Free Trial
+                            :disabled="currentPlan === 'STARTER'"
+                            :class="currentPlan === 'STARTER' ? 'bg-slate-400 cursor-not-allowed text-white' : 'bg-white hover:bg-brand-50 text-brand-700'"
+                            class="w-full font-semibold py-3 rounded-lg transition">
+                            <span x-text="currentPlan === 'STARTER' ? 'Current Plan' : 'Select Plan'"></span>
                         </button>
                     </div>
 
@@ -263,8 +267,10 @@
                         </ul>
 
                         <button @click="selectPlan('small_business', billingPeriod)"
-                            class="w-full bg-brand-600 text-white font-semibold py-3 rounded-lg hover:bg-brand-700 transition">
-                            Start Free Trial
+                            :disabled="currentPlan === 'SMALL_BUSINESS'"
+                            :class="currentPlan === 'SMALL_BUSINESS' ? 'bg-slate-400 cursor-not-allowed' : 'bg-brand-600 hover:bg-brand-700'"
+                            class="w-full text-white font-semibold py-3 rounded-lg transition">
+                            <span x-text="currentPlan === 'SMALL_BUSINESS' ? 'Current Plan' : 'Select Plan'"></span>
                         </button>
                     </div>
 
@@ -314,8 +320,10 @@
                         </ul>
 
                         <button @click="selectPlan('professional', billingPeriod)"
-                            class="w-full bg-brand-600 text-white font-semibold py-3 rounded-lg hover:bg-brand-700 transition">
-                            Start Free Trial
+                            :disabled="currentPlan === 'PROFESSIONAL'"
+                            :class="currentPlan === 'PROFESSIONAL' ? 'bg-slate-400 cursor-not-allowed' : 'bg-brand-600 hover:bg-brand-700'"
+                            class="w-full text-white font-semibold py-3 rounded-lg transition">
+                            <span x-text="currentPlan === 'PROFESSIONAL' ? 'Current Plan' : 'Select Plan'"></span>
                         </button>
                     </div>
                 </div>
@@ -327,12 +335,35 @@
                 return {
                     billingPeriod: 'monthly',
                     isAuthenticated: false,
+                    currentPlan: null,
 
-                    init() {
+                    async init() {
                         this.isAuthenticated = Auth.isAuthenticated();
+
+                        // Fetch current subscription if authenticated
+                        if (this.isAuthenticated) {
+                            await this.fetchCurrentSubscription();
+                        }
+                    },
+
+                    async fetchCurrentSubscription() {
+                        try {
+                            const response = await Auth.fetch('/api/v1/subscriptions/current');
+                            if (response.ok) {
+                                const data = await response.json();
+                                this.currentPlan = data.plan;  // 'FREE', 'STARTER', 'SMALL_BUSINESS', 'PROFESSIONAL'
+                            }
+                        } catch (error) {
+                            console.error('Failed to fetch subscription:', error);
+                        }
                     },
 
                     selectPlan(tier, period = 'monthly') {
+                        // Don't allow selecting current plan
+                        if (tier.toUpperCase() === this.currentPlan) {
+                            return;
+                        }
+
                         if (tier === 'free') {
                             // Redirect to registration
                             window.location.href = '/static/register.html';

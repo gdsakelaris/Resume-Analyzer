@@ -53,7 +53,7 @@ async def create_subscription(
     This creates:
     1. A Stripe customer (if doesn't exist)
     2. Attaches the payment method
-    3. Creates a Stripe subscription with trial period
+    3. Creates a Stripe subscription (charges immediately)
     4. Updates the local subscription record
 
     Returns subscription details.
@@ -126,13 +126,12 @@ async def create_subscription(
                 },
             )
 
-        # Create Stripe subscription with 14-day trial
+        # Create Stripe subscription (no trial - charge immediately)
         stripe_subscription = stripe.Subscription.create(
             customer=subscription.stripe_customer_id,
             items=[{
                 'price': tier_config['price_id'],
             }],
-            trial_period_days=14,
             metadata={
                 'user_id': str(current_user.id),
                 'tenant_id': str(current_user.tenant_id),
@@ -143,7 +142,7 @@ async def create_subscription(
         # Update local subscription record
         subscription.stripe_subscription_id = stripe_subscription.id
         subscription.plan = tier_config['plan']
-        subscription.status = SubscriptionStatus.TRIALING
+        subscription.status = SubscriptionStatus.ACTIVE
         subscription.monthly_candidate_limit = tier_config['limit']
         subscription.current_period_start = stripe_subscription.current_period_start
         subscription.current_period_end = stripe_subscription.current_period_end
@@ -157,7 +156,6 @@ async def create_subscription(
             "subscription_id": stripe_subscription.id,
             "status": subscription.status.value,
             "plan": subscription.plan.value,
-            "trial_end": stripe_subscription.trial_end,
             "monthly_candidate_limit": subscription.monthly_candidate_limit
         }
 
