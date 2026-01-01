@@ -39,7 +39,7 @@ class JobConfigSchema(BaseModel):
 class JobCreateRequest(BaseModel):
     """Schema for creating a new job"""
     title: str = Field(..., min_length=1, max_length=200)
-    description: str = Field(..., min_length=10)
+    description: str = Field(..., min_length=10, max_length=15000, description="Job description (max 15,000 characters)")
     location: Optional[str] = None
     work_authorization_required: bool = False
 
@@ -47,7 +47,7 @@ class JobCreateRequest(BaseModel):
 class JobUpdateRequest(BaseModel):
     """Schema for updating an existing job"""
     title: Optional[str] = Field(None, min_length=1, max_length=200)
-    description: Optional[str] = Field(None, min_length=10)
+    description: Optional[str] = Field(None, min_length=10, max_length=15000, description="Job description (max 15,000 characters)")
     location: Optional[str] = None
     work_authorization_required: Optional[bool] = None
 
