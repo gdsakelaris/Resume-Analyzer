@@ -69,10 +69,18 @@ async def create_subscription(
 
         # Check if already has active PAID subscription (allow upgrading from FREE)
         if subscription.status == SubscriptionStatus.ACTIVE and subscription.plan != SubscriptionPlan.FREE:
-            raise HTTPException(
-                status_code=400,
-                detail="User already has an active paid subscription. Please cancel it first or use the upgrade endpoint."
-            )
+            # User has a paid subscription - cancel it first
+            if subscription.stripe_subscription_id:
+                try:
+                    # Cancel the current Stripe subscription
+                    stripe.Subscription.delete(subscription.stripe_subscription_id)
+                    logger.info(f"Cancelled existing subscription {subscription.stripe_subscription_id} for user {current_user.id}")
+                except stripe.error.StripeError as e:
+                    logger.error(f"Failed to cancel existing subscription: {e}")
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Failed to cancel existing subscription: {str(e)}"
+                    )
 
         # Map tier to Stripe price ID and limits
         tier_mapping = {
