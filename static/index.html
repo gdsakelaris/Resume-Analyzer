@@ -39,7 +39,7 @@
         <script>
             // Check authentication BEFORE rendering the page
             (function() {
-                const token = localStorage.getItem('access_token');
+                const token = localStorage.getItem('starscreen_access_token');
                 if (!token) {
                     // No token - redirect immediately before page renders
                     window.location.href = '/static/login.html';
