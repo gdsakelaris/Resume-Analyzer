@@ -12,6 +12,7 @@ import zipfile
 from typing import Optional
 from uuid import UUID as UUIDType
 from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException
+from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.deps import get_tenant_id, get_current_active_subscription
@@ -493,8 +494,6 @@ def get_candidate_file(
     Raises:
         HTTPException 404: If candidate not found or file doesn't exist
     """
-    from fastapi.responses import FileResponse
-
     # SECURITY: Filter by tenant_id to prevent file access across tenants
     candidate = db.query(Candidate).filter(
         Candidate.id == candidate_id,
@@ -515,25 +514,33 @@ def get_candidate_file(
             detail=f"Resume file not found for candidate {candidate_id}"
         )
 
-    # For S3, download file to temp location for FileResponse
+    # For S3, stream file directly from memory (no temp file needed)
     # For local storage, file_path is already on disk
     from app.core.config import settings
     if settings.USE_S3:
         try:
-            # Download from S3 to memory, then save temporarily
-            import tempfile
+            # Download from S3 to memory
             file_data = storage.download_file(candidate.file_path)
 
-            # Create temporary file
-            suffix = os.path.splitext(candidate.original_filename)[1]
-            with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp_file:
-                tmp_file.write(file_data.getvalue())
-                temp_path = tmp_file.name
+            # Determine content type
+            file_ext = os.path.splitext(candidate.original_filename)[1].lower()
+            content_type_map = {
+                '.pdf': 'application/pdf',
+                '.doc': 'application/msword',
+                '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            }
+            content_type = content_type_map.get(file_ext, 'application/octet-stream')
 
-            return FileResponse(
-                path=temp_path,
-                filename=candidate.original_filename,
-                media_type="application/octet-stream"
+            # Reset BytesIO position to beginning
+            file_data.seek(0)
+
+            # Stream directly from memory - no temp file needed
+            return StreamingResponse(
+                file_data,
+                media_type=content_type,
+                headers={
+                    'Content-Disposition': f'attachment; filename="{candidate.original_filename}"'
+                }
             )
         except Exception as e:
             logger.error(f"Failed to download file from S3: {e}")
