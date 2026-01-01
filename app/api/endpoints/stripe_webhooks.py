@@ -15,7 +15,6 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.database import get_db
 from app.models.subscription import Subscription, SubscriptionStatus, SubscriptionPlan
-from app.models.user import User
 
 router = APIRouter(prefix="/webhooks", tags=["Stripe Webhooks"])
 logger = logging.getLogger(__name__)
@@ -107,14 +106,30 @@ def handle_subscription_created(db: Session, stripe_sub: dict):
     subscription.current_period_start = stripe_sub.get("current_period_start")
     subscription.current_period_end = stripe_sub.get("current_period_end")
 
-    # Map Stripe price ID to plan
+    # Map Stripe price ID to plan and limits (same as subscriptions.py)
     price_id = stripe_sub["items"]["data"][0]["price"]["id"]
-    if price_id == settings.STRIPE_PRICE_ID_STARTER:
-        subscription.plan = SubscriptionPlan.STARTER
-        subscription.monthly_candidate_limit = 50
-    elif price_id == settings.STRIPE_PRICE_ID_PROFESSIONAL:
-        subscription.plan = SubscriptionPlan.PROFESSIONAL
-        subscription.monthly_candidate_limit = 200
+    tier_mapping = {
+        settings.STRIPE_PRICE_ID_STARTER: {
+            "plan": SubscriptionPlan.STARTER,
+            "limit": 100
+        },
+        settings.STRIPE_PRICE_ID_SMALL_BUSINESS: {
+            "plan": SubscriptionPlan.SMALL_BUSINESS,
+            "limit": 1000
+        },
+        settings.STRIPE_PRICE_ID_PROFESSIONAL: {
+            "plan": SubscriptionPlan.PROFESSIONAL,
+            "limit": 999999  # Unlimited
+        }
+    }
+
+    tier_config = tier_mapping.get(price_id)
+    if tier_config:
+        subscription.plan = tier_config["plan"]
+        subscription.monthly_candidate_limit = tier_config["limit"]
+        logger.info(f"Mapped price {price_id} to plan {tier_config['plan'].value} with limit {tier_config['limit']}")
+    else:
+        logger.warning(f"Unknown Stripe price ID: {price_id}")
 
     db.commit()
     logger.info(f"Subscription created for customer {stripe_customer_id}")
@@ -137,14 +152,30 @@ def handle_subscription_updated(db: Session, stripe_sub: dict):
     subscription.current_period_start = stripe_sub.get("current_period_start")
     subscription.current_period_end = stripe_sub.get("current_period_end")
 
-    # Check for plan changes
+    # Check for plan changes (use same tier mapping as subscription creation)
     price_id = stripe_sub["items"]["data"][0]["price"]["id"]
-    if price_id == settings.STRIPE_PRICE_ID_STARTER:
-        subscription.plan = SubscriptionPlan.STARTER
-        subscription.monthly_candidate_limit = 50
-    elif price_id == settings.STRIPE_PRICE_ID_PROFESSIONAL:
-        subscription.plan = SubscriptionPlan.PROFESSIONAL
-        subscription.monthly_candidate_limit = 200
+    tier_mapping = {
+        settings.STRIPE_PRICE_ID_STARTER: {
+            "plan": SubscriptionPlan.STARTER,
+            "limit": 100
+        },
+        settings.STRIPE_PRICE_ID_SMALL_BUSINESS: {
+            "plan": SubscriptionPlan.SMALL_BUSINESS,
+            "limit": 1000
+        },
+        settings.STRIPE_PRICE_ID_PROFESSIONAL: {
+            "plan": SubscriptionPlan.PROFESSIONAL,
+            "limit": 999999  # Unlimited
+        }
+    }
+
+    tier_config = tier_mapping.get(price_id)
+    if tier_config:
+        subscription.plan = tier_config["plan"]
+        subscription.monthly_candidate_limit = tier_config["limit"]
+        logger.info(f"Updated to plan {tier_config['plan'].value} with limit {tier_config['limit']}")
+    else:
+        logger.warning(f"Unknown Stripe price ID during update: {price_id}")
 
     db.commit()
     logger.info(f"Subscription updated: {stripe_subscription_id} -> {subscription.status.value}")

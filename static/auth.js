@@ -64,13 +64,21 @@ const Auth = {
             const now = Math.floor(Date.now() / 1000);
 
             if (payload.exp && payload.exp < now) {
-                console.log('[Auth] Token expired');
+                console.log('[Auth] Token expired, clearing storage');
+                // Clear expired tokens to prevent redirect loops
+                localStorage.removeItem(this.ACCESS_TOKEN_KEY);
+                localStorage.removeItem(this.REFRESH_TOKEN_KEY);
+                localStorage.removeItem(this.USER_KEY);
                 return false;
             }
 
             return true;
         } catch (e) {
             console.error('[Auth] Invalid token:', e);
+            // Clear invalid tokens
+            localStorage.removeItem(this.ACCESS_TOKEN_KEY);
+            localStorage.removeItem(this.REFRESH_TOKEN_KEY);
+            localStorage.removeItem(this.USER_KEY);
             return false;
         }
     },
