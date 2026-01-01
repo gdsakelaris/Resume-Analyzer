@@ -83,12 +83,12 @@ async def create_subscription(
             },
             "SMALL_BUSINESS": {
                 "price_id": settings.STRIPE_PRICE_ID_SMALL_BUSINESS,
-                "limit": 250,
+                "limit": 1000,
                 "plan": SubscriptionPlan.SMALL_BUSINESS
             },
             "PROFESSIONAL": {
                 "price_id": settings.STRIPE_PRICE_ID_PROFESSIONAL,
-                "limit": 1000,
+                "limit": 999999,  # Unlimited (represented as very large number)
                 "plan": SubscriptionPlan.PROFESSIONAL
             }
         }
