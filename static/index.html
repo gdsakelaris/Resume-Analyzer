@@ -1324,7 +1324,10 @@
                                     this.showToast('Upload successful', 'success');
                                     this.loadCandidates();
                                 } else {
-                                    this.showToast('Upload failed', 'error');
+                                    // Get error message from response
+                                    const errorData = await res.json().catch(() => ({}));
+                                    const errorMsg = errorData.detail || 'Upload failed';
+                                    this.showToast(errorMsg, 'error');
                                 }
                             } catch (e) {
                                 this.showToast('Upload error', 'error');
@@ -1336,6 +1339,7 @@
 
                             let successCount = 0;
                             let failCount = 0;
+                            let lastErrorMsg = null;
 
                             for (let i = 0; i < files.length; i++) {
                                 const formData = new FormData();
@@ -1350,6 +1354,11 @@
                                         successCount++;
                                     } else {
                                         failCount++;
+                                        // Capture error message from first failure
+                                        if (!lastErrorMsg) {
+                                            const errorData = await res.json().catch(() => ({}));
+                                            lastErrorMsg = errorData.detail || 'Upload failed';
+                                        }
                                     }
                                 } catch (e) {
                                     failCount++;
@@ -1360,7 +1369,9 @@
                             if (failCount === 0) {
                                 this.showToast(`${successCount} resume${successCount > 1 ? 's' : ''} uploaded successfully`, 'success');
                             } else if (successCount === 0) {
-                                this.showToast(`Failed to upload ${failCount} resume${failCount > 1 ? 's' : ''}`, 'error');
+                                // Show specific error message if available
+                                const errorMsg = lastErrorMsg || `Failed to upload ${failCount} resume${failCount > 1 ? 's' : ''}`;
+                                this.showToast(errorMsg, 'error');
                             } else {
                                 this.showToast(`${successCount} uploaded, ${failCount} failed`, 'info');
                             }
