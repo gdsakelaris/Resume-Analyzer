@@ -7,6 +7,7 @@
 **Status**: Phase 1 Complete - Multi-tenant SaaS with JWT authentication, Stripe billing enforcement, and complete authentication UI
 
 ## Stack
+
 - **API**: FastAPI (Python) + Celery workers
 - **Database**: PostgreSQL (Alembic migrations)
 - **Queue**: Redis
@@ -28,6 +29,7 @@ User → Static HTML/JS → FastAPI API → PostgreSQL
 ## Data Models
 
 ### users (Phase 1)
+
 ```python
 id (UUID, PK)
 tenant_id (UUID, unique)  # Multi-tenancy isolation key
@@ -41,6 +43,7 @@ created_at, updated_at, last_login_at
 ```
 
 ### subscriptions (Phase 1)
+
 ```python
 id (UUID, PK)
 user_id (FK -> users.id, unique)
@@ -55,6 +58,7 @@ current_period_end (datetime)
 ```
 
 **Pricing Tiers (Enforced)**:
+
 - **FREE**: $0/mo - 5 candidates/month (trial tier)
 - **STARTER**: $50/mo - 100 candidates/month (solo recruiters)
 - **SMALL_BUSINESS**: $100/mo - 250 candidates/month (small teams)
@@ -62,6 +66,7 @@ current_period_end (datetime)
 - **ENTERPRISE**: $500/mo base + $0.50/candidate - Unlimited (high-volume recruiting)
 
 ### jobs
+
 ```python
 id (serial, PK)
 tenant_id (UUID, FK -> users.tenant_id)  # Multi-tenancy
@@ -76,6 +81,7 @@ created_at, updated_at
 ```
 
 ### candidates
+
 ```python
 id (serial, PK)
 tenant_id (UUID, FK -> users.tenant_id)  # Multi-tenancy
@@ -96,6 +102,7 @@ created_at, updated_at
 ```
 
 ### evaluations
+
 ```python
 id (serial, PK)
 tenant_id (UUID, FK -> users.tenant_id)  # Multi-tenancy
@@ -109,12 +116,14 @@ created_at
 ```
 
 **Relationships**:
+
 - User →→ Jobs →→ Candidates → Evaluation
 - All relationships use CASCADE DELETE via tenant_id foreign keys
 
 ## Processing Pipeline
 
 ### Job Creation Flow
+
 1. **POST /api/v1/jobs** → Insert into DB (status=PENDING, with tenant_id)
 2. **Celery task**: `generate_job_config_task(job_id)`
    - GPT-4o analyzes job description
@@ -123,13 +132,14 @@ created_at
    - Status: PENDING → PROCESSING → COMPLETED
 
 ### Resume Upload & Scoring Flow
+
 1. **POST /api/v1/jobs/{id}/candidates** → Save file to `uploads/` directory
 2. **Celery task**: `parse_resume_task(candidate_id)`
    - Extract text from PDF (6 pages max) or DOCX
    - Truncate to 25k characters
    - Status: UPLOADED → PROCESSING → PARSED
    - Auto-chains to scoring task
-3. **Celery task**: `score_candidate_task(candidate_id)` *(Auto-chained)*
+3. **Celery task**: `score_candidate_task(candidate_id)` _(Auto-chained)_
    - **AI Portion**: GPT-4o analyzes resume against job_config
      - Grades each category (0-100)
      - Extracts PII: first_name, last_name, email, phone, location
@@ -149,38 +159,44 @@ created_at
 ### JWT Token System
 
 **Token Types**:
+
 - **Access Token**: 30-minute lifespan, used for API requests
 - **Refresh Token**: 7-day lifespan, used to obtain new access tokens
 
 **Token Structure** (HS256 signed):
+
 ```json
 {
-  "sub": "user-uuid-here",
-  "tenant_id": "tenant-uuid-here",
-  "exp": 1234567890,
-  "type": "refresh"  // Only present in refresh tokens
+	"sub": "user-uuid-here",
+	"tenant_id": "tenant-uuid-here",
+	"exp": 1234567890,
+	"type": "refresh" // Only present in refresh tokens
 }
 ```
 
 **Storage**: Tokens stored in browser `localStorage`:
+
 - Key: `starscreen_access_token`
 - Key: `starscreen_refresh_token`
 
 ### API Endpoints (app/api/endpoints/auth.py)
 
 - **POST /api/v1/auth/register**
+
   - Input: `{email, password, full_name?, company_name?}`
   - Validation: Email format, password strength (8-72 chars, uppercase, lowercase, number, special)
   - Creates: User + Subscription (plan=FREE, status=TRIALING)
   - Returns: `{access_token, refresh_token, token_type}`
 
 - **POST /api/v1/auth/login**
+
   - Input: `{username: email, password}` (OAuth2 spec uses "username")
   - Validates credentials with bcrypt
   - Updates `last_login_at` timestamp
   - Returns: `{access_token, refresh_token, token_type}`
 
 - **POST /api/v1/auth/refresh**
+
   - Input: `{refresh_token}`
   - Validates refresh token
   - Returns: NEW `{access_token, refresh_token, token_type}`
@@ -192,24 +208,27 @@ created_at
 ### Frontend Authentication (static/auth.js)
 
 **Auth Utility Object** (`Auth`):
+
 ```javascript
-Auth.login(accessToken, refreshToken)      // Store tokens
-Auth.logout()                               // Clear tokens, redirect to login
-Auth.isAuthenticated()                      // Check if logged in (validates exp)
-Auth.getAccessToken()                       // Get current token
-Auth.getAuthHeaders()                       // Get {'Authorization': 'Bearer ...'}
-Auth.fetch(url, options)                    // Auto-injects headers, auto-refreshes on 401
-Auth.refreshAccessToken()                   // Refresh tokens
-Auth.parseJWT(token)                        // Decode JWT (client-side only)
+Auth.login(accessToken, refreshToken); // Store tokens
+Auth.logout(); // Clear tokens, redirect to login
+Auth.isAuthenticated(); // Check if logged in (validates exp)
+Auth.getAccessToken(); // Get current token
+Auth.getAuthHeaders(); // Get {'Authorization': 'Bearer ...'}
+Auth.fetch(url, options); // Auto-injects headers, auto-refreshes on 401
+Auth.refreshAccessToken(); // Refresh tokens
+Auth.parseJWT(token); // Decode JWT (client-side only)
 ```
 
 **Auto-Refresh Flow**:
+
 1. API request gets 401 Unauthorized
 2. `Auth.fetch()` automatically calls `Auth.refreshAccessToken()`
 3. Retries original request with new token
 4. If refresh fails → logout user
 
 **Route Protection**:
+
 - `auth.js` includes DOMContentLoaded listener
 - Public pages: `login.html`, `register.html`
 - All other pages require authentication (auto-redirect to login)
@@ -217,6 +236,7 @@ Auth.parseJWT(token)                        // Decode JWT (client-side only)
 ### Password Validation (app/schemas/user.py)
 
 **Backend Validation** (Pydantic):
+
 ```python
 @field_validator('password')
 def validate_password_strength(cls, v: str) -> str:
@@ -226,6 +246,7 @@ def validate_password_strength(cls, v: str) -> str:
 ```
 
 **Frontend Validation** (register.html):
+
 - Real-time checklist with green/red indicators
 - Password visibility toggle (eye icon)
 - Confirm password matching indicator
@@ -234,17 +255,20 @@ def validate_password_strength(cls, v: str) -> str:
 ### Multi-Tenancy Implementation
 
 **Row-Level Security**:
+
 - Every protected resource has `tenant_id` column
 - All queries filter by `tenant_id` via dependency injection
 - Dependency: `get_tenant_id(token)` extracts tenant_id from JWT
 
 **Production Mode** (Enforced):
+
 - ✅ All endpoints now require authentication via `get_tenant_id()` or `get_current_active_subscription()`
 - ✅ Job creation requires active subscription
 - ✅ Candidate upload enforces monthly limits based on plan
 - ✅ Bulk upload respects limits (stops gracefully when reached)
 
 **Tenant Isolation**:
+
 ```python
 # app/crud/job.py example
 def get_multi(db, tenant_id, skip=0, limit=100):
@@ -255,6 +279,7 @@ def get_multi(db, tenant_id, skip=0, limit=100):
 ## Frontend Architecture
 
 ### File Structure
+
 ```
 static/
 ├── index.html         # Main dashboard (Alpine.js SPA)
@@ -271,6 +296,7 @@ public/
 ### Main Dashboard (static/index.html)
 
 **Features**:
+
 - Job creation form with AI-powered config generation
 - Job list with expand/collapse
 - Resume upload (drag-drop + file picker)
@@ -279,11 +305,13 @@ public/
 - Logout button
 
 **Tech Stack**:
+
 - Alpine.js for reactivity (x-data, x-model, x-show, etc.)
 - Tailwind CSS for styling (CDN-loaded)
 - `Auth.fetch()` for all API calls (auto-injects JWT)
 
 **Key State Variables**:
+
 ```javascript
 jobs: [],           // List of jobs
 candidates: [],     // List of candidates for selected job
@@ -294,6 +322,7 @@ selectedCandidate: null,  // Candidate being viewed in modal
 ### Login Page (static/login.html)
 
 **Features**:
+
 - Email + password form
 - Error message display (red banner)
 - Success message (green banner)
@@ -301,6 +330,7 @@ selectedCandidate: null,  // Candidate being viewed in modal
 - Link to registration page
 
 **Alpine.js State**:
+
 ```javascript
 {
   email: '',
@@ -312,12 +342,14 @@ selectedCandidate: null,  // Candidate being viewed in modal
 ```
 
 **Error Handling**:
+
 - Parses FastAPI error formats: string detail, array detail (Pydantic), object with message
 - Displays user-friendly error messages
 
 ### Registration Page (static/register.html)
 
 **Features**:
+
 - Email, password, confirm password, full name, company name
 - Real-time password validation with visual checklist
 - Password visibility toggles (eye icons)
@@ -326,15 +358,17 @@ selectedCandidate: null,  // Candidate being viewed in modal
 - Link to login page
 
 **Password Validation UI**:
+
 - 5 requirements with green checkmarks / red X icons:
   - 8-72 characters
   - Lowercase letter
   - Uppercase letter
   - Number
-  - Special character (!@#$%^&*)
+  - Special character (!@#$%^&\*)
 - Password match indicator (green "Passwords match" / red "Passwords do not match")
 
 **Alpine.js State**:
+
 ```javascript
 {
   email: '',
@@ -359,6 +393,7 @@ selectedCandidate: null,  // Candidate being viewed in modal
 ```
 
 **Functions**:
+
 - `validatePassword()`: Checks all password requirements with regex
 - `validatePasswordMatch()`: Checks if passwords match
 - `handleRegister()`: Form submission, API call, token storage
@@ -370,19 +405,23 @@ selectedCandidate: null,  // Candidate being viewed in modal
 ### File Parsing (app/tasks/resume_tasks.py)
 
 **PDF Files**:
+
 - Maximum 6 pages extracted
 - Maximum 25,000 characters total
 - Uses `pdfplumber` library
 - Error handling: Rejects corrupted PDFs
 
 **DOCX Files**:
+
 - Maximum 25,000 characters
 - Uses `docx2txt` library
 
 **DOC Files**:
+
 - Rejected with message: "Please convert .doc to .docx or PDF"
 
 **Storage**:
+
 - Files saved to `uploads/` directory (local filesystem)
 - Path format: `uploads/{original_filename}`
 - **Future**: Migrate to S3 for horizontal scaling
@@ -390,7 +429,9 @@ selectedCandidate: null,  // Candidate being viewed in modal
 ### Scoring Engine (app/tasks/scoring_tasks.py)
 
 **Hybrid Architecture** (AI + Python):
+
 - **AI Responsibilities**:
+
   - Grade each category (0-100) based on resume evidence
   - Extract PII: first_name, last_name, email, phone, location
   - Extract URLs: LinkedIn, GitHub, Portfolio, and other URLs
@@ -404,6 +445,7 @@ selectedCandidate: null,  // Candidate being viewed in modal
   - Update database with extracted data
 
 **Grading Scale** (communicated to AI):
+
 - 0-20: No evidence found
 - 21-50: Listed in Skills section, but no project usage
 - 51-75: Competent - used in at least one project
@@ -411,6 +453,7 @@ selectedCandidate: null,  // Candidate being viewed in modal
 - 91-100: Exceptional - lead architect, major achievements
 
 **Contact Field Updates**:
+
 - Only update if AI found the field AND field is currently NULL
 - Preserves manually entered contact information
 - Example logic:
@@ -420,27 +463,32 @@ selectedCandidate: null,  // Candidate being viewed in modal
   ```
 
 **URL Extraction & Smart Sorting**:
+
 1. AI returns: `linkedin_url`, `github_url`, `portfolio_url`, `all_other_urls[]`
 2. Python assigns to dedicated columns
 3. Remove duplicates from `other_urls`
 4. Store remaining URLs as JSONB array
 
 **Error Handling**:
+
 - If scoring fails → `candidate.status = FAILED`, `candidate.error_message = str(e)`
 - Idempotent: Deletes existing evaluation before creating new one
 
 ### Legal Compliance
 
 **Terminology**:
+
 - Use "Relevance Indicator" not "Match Score" in UI
 - Disclaimer: "This is a decision-support tool, not a hiring decision"
 
 **Blind Screening Support**:
+
 - All candidate contact fields are nullable
 - Resume text extraction doesn't require PII
 - AI extracts PII opportunistically, doesn't fail if missing
 
 **Data Retention**:
+
 - CASCADE DELETE: Deleting user deletes all jobs/candidates/evaluations
 
 ## Billing & Subscription System
@@ -449,15 +497,16 @@ selectedCandidate: null,  // Candidate being viewed in modal
 
 **5-Tier SaaS Pricing**:
 
-| Tier | Monthly Price | Candidates/Month | Cost Per Candidate | Target Market |
-|------|--------------|------------------|-------------------|---------------|
-| **FREE** | $0 | 5 | Free | Trial/Testing |
-| **STARTER** | $50 | 100 | $0.50 | Solo Recruiters |
-| **SMALL_BUSINESS** | $100 | 250 | $0.40 | Small Teams |
-| **PROFESSIONAL** | $200 | 1,000 | $0.20 | Growing Companies |
-| **ENTERPRISE** | $500 base + $0.50/candidate | Unlimited | Variable | High-Volume |
+| Tier               | Monthly Price               | Candidates/Month | Cost Per Candidate | Target Market     |
+| ------------------ | --------------------------- | ---------------- | ------------------ | ----------------- |
+| **FREE**           | $0                          | 5                | Free               | Trial/Testing     |
+| **STARTER**        | $50                         | 100              | $0.50              | Solo Recruiters   |
+| **SMALL_BUSINESS** | $100                        | 250              | $0.40              | Small Teams       |
+| **PROFESSIONAL**   | $200                        | 1,000            | $0.20              | Growing Companies |
+| **ENTERPRISE**     | $500 base + $0.50/candidate | Unlimited        | Variable           | High-Volume       |
 
 **Enterprise Billing Examples**:
+
 - 500 candidates: $500 + (500 × $0.50) = **$750** ($1.50/candidate)
 - 1,000 candidates: $500 + (1,000 × $0.50) = **$1,000** ($1.00/candidate)
 - 2,000 candidates: $500 + (2,000 × $0.50) = **$1,500** ($0.75/candidate)
@@ -465,6 +514,7 @@ selectedCandidate: null,  // Candidate being viewed in modal
 ### Enforcement Points
 
 **1. Job Creation** (app/api/endpoints/jobs.py:create_job)
+
 ```python
 @router.post("/")
 def create_job(
@@ -475,6 +525,7 @@ def create_job(
 ```
 
 **2. Candidate Upload** (app/api/endpoints/candidates.py:upload_resume)
+
 ```python
 @router.post("/upload")
 def upload_resume(
@@ -487,6 +538,7 @@ def upload_resume(
 ```
 
 **3. Bulk Upload** (app/api/endpoints/candidates.py:bulk_upload_resumes)
+
 ```python
 @router.post("/bulk-upload-zip")
 def bulk_upload_resumes(...):
@@ -498,6 +550,7 @@ def bulk_upload_resumes(...):
 ### Usage Tracking
 
 **Subscription Properties** (app/models/subscription.py):
+
 ```python
 subscription.can_upload_candidate       # bool: Has remaining quota?
 subscription.remaining_candidates       # int: How many left this month
@@ -507,6 +560,7 @@ subscription.calculate_monthly_cost()   # Method: Base + usage charges
 ```
 
 **Monthly Reset**:
+
 - Currently: Manual reset required (Stripe webhook integration needed)
 - Future: Automated via `subscription.updated` webhook event
 - Reset logic: `candidates_used_this_month = 0` at billing cycle renewal
@@ -514,28 +568,32 @@ subscription.calculate_monthly_cost()   # Method: Base + usage charges
 ### Error Responses
 
 **HTTP 402 Payment Required**:
+
 ```json
 {
-  "detail": "Monthly candidate limit reached (5/5). Please upgrade your plan or wait for next billing cycle."
+	"detail": "Monthly candidate limit reached (5/5). Please upgrade your plan or wait for next billing cycle."
 }
 ```
 
 **HTTP 402 Inactive Subscription**:
+
 ```json
 {
-  "detail": "Subscription is past_due. Please update your payment method."
+	"detail": "Subscription is past_due. Please update your payment method."
 }
 ```
 
 ### Stripe Integration
 
 **Webhook Events** (app/api/endpoints/stripe_webhooks.py):
+
 - `invoice.payment_succeeded` → Update status to ACTIVE
 - `invoice.payment_failed` → Update status to PAST_DUE
 - `customer.subscription.updated` → Sync plan changes
 - `customer.subscription.deleted` → Update status to CANCELED
 
 **Metered Billing** (Enterprise only):
+
 - Reports usage to Stripe via API: `stripe.SubscriptionItem.create_usage_record()`
 - Billed monthly based on `candidates_used_this_month`
 - Base fee charged regardless of usage
@@ -598,6 +656,7 @@ Resume-Analyzer/
 ## Environment Variables (.env)
 
 **Required**:
+
 ```bash
 # OpenAI
 OPENAI_API_KEY=sk-...
@@ -620,6 +679,7 @@ REFRESH_TOKEN_EXPIRE_DAYS=7
 ```
 
 **Optional** (Stripe):
+
 ```bash
 STRIPE_API_KEY=sk_test_... # or sk_live_... for production
 STRIPE_WEBHOOK_SECRET=whsec_...
@@ -627,7 +687,7 @@ STRIPE_PRICE_ID_STARTER=price_...
 STRIPE_PRICE_ID_SMALL_BUSINESS=price_...
 STRIPE_PRICE_ID_PROFESSIONAL=price_...
 STRIPE_PRICE_ID_ENTERPRISE_BASE=price_... # Base subscription
-STRIPE_PRICE_ID_ENTERPRISE_USAGE=price_... # Metered billing for per-candidate charge
+STRIPE_PRICE_ID_ENTERPRISE_USAGE=price_... # Metered billing for per-candidate charge (not sure yet how to implement with Stripe to pick up amount of times they uploaded a new candidate resume)
 ```
 
 **Note**: Without Stripe keys, app still enforces billing - all users get FREE tier (5 candidates/month) until they upgrade.
@@ -635,6 +695,7 @@ STRIPE_PRICE_ID_ENTERPRISE_USAGE=price_... # Metered billing for per-candidate c
 ## Common Commands
 
 ### Docker Operations
+
 ```bash
 # Start all services
 docker-compose up -d
@@ -653,6 +714,7 @@ docker-compose up -d
 ```
 
 ### Database Operations
+
 ```bash
 # Run migrations
 docker-compose exec api alembic upgrade head
@@ -670,6 +732,7 @@ docker-compose exec api alembic upgrade head
 ```
 
 ### Celery Operations
+
 ```bash
 # Check worker status
 docker-compose exec worker celery -A app.core.celery_app inspect active
@@ -684,6 +747,7 @@ docker-compose exec worker celery -A app.core.celery_app purge
 - **ReDoc**: http://localhost:8000/redoc
 
 **Testing with Swagger**:
+
 1. Click "Authorize" button
 2. Paste access_token (without "Bearer")
 3. All authenticated endpoints now work
@@ -693,6 +757,7 @@ docker-compose exec worker celery -A app.core.celery_app purge
 ### Manual Testing Flow
 
 **1. Register New User**:
+
 ```bash
 curl -X POST http://localhost:8000/api/v1/auth/register \
   -H "Content-Type: application/json" \
@@ -707,6 +772,7 @@ curl -X POST http://localhost:8000/api/v1/auth/register \
 ```
 
 **2. Create Job**:
+
 ```bash
 curl -X POST http://localhost:8000/api/v1/jobs/ \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
@@ -721,6 +787,7 @@ curl -X POST http://localhost:8000/api/v1/jobs/ \
 ```
 
 **3. Upload Resume**:
+
 ```bash
 curl -X POST http://localhost:8000/api/v1/jobs/1/candidates \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
@@ -730,6 +797,7 @@ curl -X POST http://localhost:8000/api/v1/jobs/1/candidates \
 ```
 
 **4. Check Candidate Status**:
+
 ```bash
 curl -X GET http://localhost:8000/api/v1/candidates/1 \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
@@ -738,6 +806,7 @@ curl -X GET http://localhost:8000/api/v1/candidates/1 \
 ```
 
 **5. View Analysis**:
+
 ```bash
 curl -X GET http://localhost:8000/api/v1/candidates/1/analysis \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
@@ -748,6 +817,7 @@ curl -X GET http://localhost:8000/api/v1/candidates/1/analysis \
 ### Multi-Tenancy Testing
 
 **Verify tenant isolation**:
+
 ```bash
 # Create Company A user
 TOKEN_A=$(curl -X POST http://localhost:8000/api/v1/auth/register \
@@ -780,39 +850,47 @@ curl -X GET http://localhost:8000/api/v1/jobs/$JOB_A \
 ### Common Errors
 
 **"Server error. Please try again" on Registration**:
+
 - Fixed: bcrypt 72-byte password limit error
 - Solution: [app/core/security.py](app/core/security.py#L18-L34) now truncates passwords to 72 bytes before hashing
 - Issue was caused by bcrypt initialization trying to verify passwords longer than 72 bytes
 
 **Pydantic ValidationError: "Extra inputs are not permitted"**:
+
 - Fixed: [app/core/config.py](app/core/config.py#L69) now has `extra = "ignore"`
 - Allows .env to have extra fields (like DATABASE_URL, CELERY_BROKER_URL) that are computed as properties
 
 **401 Unauthorized**:
+
 - Verify `Authorization: Bearer <token>` header format
 - Check if token expired (30 min for access token)
 - Ensure SECRET_KEY is set in .env
 - Try refreshing token or re-logging in
 
 **Candidates Stuck at PARSED**:
+
 - Check worker logs: `docker-compose logs -f worker`
 - Verify `tenant_id` is set on Evaluation model (bug fixed in scoring_tasks.py:281)
 - Restart worker: `docker-compose restart worker`
 
 **Password Validation Errors**:
+
 - Password must be 8-72 characters (bcrypt limitation)
-- Requires: lowercase, uppercase, number, special character (!@#$%^&*(),.?":{}|<>)
+- Requires: lowercase, uppercase, number, special character (!@#$%^&\*(),.?":{}|<>)
 - Frontend shows real-time validation checklist
 
 **"[object Object]" Error on Login**:
+
 - Fixed in login.html:149 - sends `username` field instead of `email`
 - Backend expects OAuth2-compliant request format
 
 **Registration Page Content Cutoff**:
+
 - Fixed in register.html:2,39 - uses `min-h-screen` instead of `h-full`
 - Allows scrolling for tall forms
 
 **Migration Errors**:
+
 ```bash
 # Reset database (WARNING: deletes all data)
 docker-compose down -v
@@ -821,6 +899,7 @@ docker-compose exec api alembic upgrade head
 ```
 
 **Celery Worker Not Processing**:
+
 ```bash
 # Check worker status
 docker-compose logs worker
@@ -835,6 +914,7 @@ docker-compose exec worker celery -A app.core.celery_app purge
 ## Current Limitations & Future Work
 
 ### Phase 1 Complete ✓
+
 - [x] JWT authentication system (stateless, HS256)
 - [x] Multi-tenant database architecture (row-level security)
 - [x] Stripe billing integration with webhook support
@@ -849,6 +929,7 @@ docker-compose exec worker celery -A app.core.celery_app purge
 - [x] Multi-tenancy isolation for all resources
 
 ### Phase 2 - Production Readiness
+
 - [ ] **S3 File Storage**: Replace local `uploads/` with AWS S3
   - Enables horizontal scaling (stateless API servers)
   - Update: `app/api/endpoints/candidates.py`, `app/tasks/resume_tasks.py`
@@ -860,6 +941,7 @@ docker-compose exec worker celery -A app.core.celery_app purge
 - [ ] **Logging**: Replace print with structured JSON logging (structlog)
 
 ### Known Issues
+
 - [ ] Local file storage blocks horizontal scaling
 - [ ] No email verification (is_verified always False)
 - [ ] No password reset functionality
@@ -872,6 +954,7 @@ docker-compose exec worker celery -A app.core.celery_app purge
 ## Security Considerations
 
 ### Current Security Measures
+
 - ✅ Bcrypt password hashing with 72-byte limit enforcement (as of 2025-12-31)
   - Passwords automatically truncated to 72 bytes in both hashing and verification
   - Prevents ValueError crashes during authentication
@@ -884,6 +967,7 @@ docker-compose exec worker celery -A app.core.celery_app purge
 - ✅ SQL injection prevention (SQLAlchemy ORM with parameterized queries)
 
 ### Production Recommendations
+
 - Use environment variables for all secrets (never hardcode)
 - Enable CORS restrictions (currently allows all origins)
 - Implement rate limiting on auth endpoints
@@ -896,19 +980,23 @@ docker-compose exec worker celery -A app.core.celery_app purge
 ## Migration Notes
 
 ### Breaking Changes from Pre-Auth Version
+
 - All jobs/candidates now require `tenant_id`
 - Legacy data assigned to `legacy@starscreen.internal` user
 - API endpoints now require `Authorization: Bearer <token>` header
 - Frontend must use `Auth.fetch()` instead of regular `fetch()`
 
 ### Database Enum Types Created
+
 ```sql
 CREATE TYPE subscriptionplan AS ENUM ('free', 'starter', 'small_business', 'professional', 'enterprise');
 CREATE TYPE subscriptionstatus AS ENUM ('trialing', 'active', 'past_due', 'canceled', 'unpaid');
 ```
 
 ### Tenant ID Propagation
+
 All resources cascade from `users.tenant_id`:
+
 ```
 users.tenant_id (unique)
   ↓
@@ -922,19 +1010,23 @@ evaluations.tenant_id
 ## Additional Resources
 
 **Frontend Frameworks**:
+
 - Alpine.js Docs: https://alpinejs.dev
 - Tailwind CSS Docs: https://tailwindcss.com
 
 **Backend Libraries**:
+
 - FastAPI Docs: https://fastapi.tiangolo.com
 - SQLAlchemy ORM: https://docs.sqlalchemy.org
 - Celery Docs: https://docs.celeryproject.org
 - Pydantic Validation: https://docs.pydantic.dev
 
 **OpenAI API**:
+
 - GPT-4 Docs: https://platform.openai.com/docs
 
 **Deployment**:
+
 - Docker Compose: https://docs.docker.com/compose/
 - Alembic Migrations: https://alembic.sqlalchemy.org
 
@@ -942,24 +1034,27 @@ evaluations.tenant_id
 
 ---
 
-*Last Updated: 2025-12-31*
+_Last Updated: 2025-12-31_
 
-*Phase 1 Complete - Multi-tenant SaaS with JWT auth, billing enforcement, and 5-tier pricing*
+_Phase 1 Complete - Multi-tenant SaaS with JWT auth, billing enforcement, and 5-tier pricing_
 
 ## Recent Bug Fixes (2025-12-31)
 
 ### 1. Bcrypt Version Incompatibility Fix (CRITICAL)
+
 **Issue**: Server crashed with `ValueError: password cannot be longer than 72 bytes, truncate manually if necessary` during both registration and login attempts.
 
 **Root Cause**: passlib 1.7.4 is incompatible with bcrypt 5.0.0+. The newer bcrypt changed its internal API, and passlib's CryptContext initialization attempted to hash test passwords that exceeded bcrypt's 72-byte limit, causing initialization to fail entirely.
 
 **Failed Attempts**:
+
 1. Manual byte truncation in [app/core/security.py](app/core/security.py) - Error persisted
 2. String truncation with UTF-8 decode - Error persisted
 3. CryptContext configuration (`bcrypt__truncate_error=False`) - Configuration option doesn't exist
 4. Removing truncation logic entirely - Error persisted
 
 **Successful Fix**: Downgraded bcrypt to compatible version in [requirements.txt](requirements.txt#L10):
+
 ```python
 # Authentication & Security
 python-jose[cryptography]==3.3.0  # JWT token generation/validation
@@ -968,6 +1063,7 @@ bcrypt==3.2.0                     # Compatible version with passlib 1.7.4
 ```
 
 **Resolution Steps**:
+
 1. Updated requirements.txt with `bcrypt==3.2.0`
 2. Ran `docker-compose down`
 3. Ran `docker-compose up --build -d` (full rebuild with new bcrypt version)
@@ -980,7 +1076,9 @@ bcrypt==3.2.0                     # Compatible version with passlib 1.7.4
 ---
 
 ### 2. SQLAlchemy Enum Value Mismatch Fix (CRITICAL)
+
 **Issue**: Registration succeeded until database insertion, then failed with:
+
 ```
 sqlalchemy.exc.DataError: (psycopg2.errors.InvalidTextRepresentation)
 invalid input value for enum subscriptionplan: "FREE"
@@ -989,6 +1087,7 @@ invalid input value for enum subscriptionplan: "FREE"
 **Root Cause**: PostgreSQL enum values are lowercase (`'free'`, `'starter'`, etc.), but SQLAlchemy's default `Enum()` column definition uses the Python enum's **NAME** (uppercase `FREE`, `STARTER`) instead of the enum's **VALUE** (lowercase).
 
 **Example**:
+
 ```python
 class SubscriptionPlan(str, enum.Enum):
     FREE = "free"        # NAME: FREE, VALUE: "free"
@@ -996,6 +1095,7 @@ class SubscriptionPlan(str, enum.Enum):
 ```
 
 **Fix**: Modified [app/models/subscription.py](app/models/subscription.py#L104-L105) to use `values_callable`:
+
 ```python
 # Before (BROKEN):
 plan = Column(Enum(SubscriptionPlan), default=SubscriptionPlan.FREE, nullable=False)
@@ -1022,7 +1122,9 @@ status = Column(
 ---
 
 ### 3. Missing Database Tables Fix
+
 **Issue**: After rebuilding Docker containers, API requests failed with:
+
 ```
 sqlalchemy.exc.ProgrammingError: (psycopg2.errors.UndefinedTable)
 relation "users" does not exist
@@ -1031,6 +1133,7 @@ relation "users" does not exist
 **Root Cause**: Running `docker-compose up --build -d` creates a fresh database container with no schema. Alembic migrations must be run manually after rebuilding.
 
 **Fix**: Ran database migrations:
+
 ```bash
 docker-compose exec api alembic upgrade head
 ```
@@ -1042,12 +1145,15 @@ docker-compose exec api alembic upgrade head
 ---
 
 ### 4. Pydantic Settings Validation Error Fix
+
 **Issue**: API crashed on startup with `ValidationError: 5 validation errors for Settings - Extra inputs are not permitted` for DATABASE_URL, CELERY_BROKER_URL, and other computed fields.
 
 **Root Cause**: Pydantic v2 defaults to `extra = "forbid"`, which rejects .env fields that aren't explicitly defined in the Settings class. The .env file contained legacy fields that were actually computed as properties (e.g., DATABASE_URL is constructed from POSTGRES_USER, POSTGRES_PASSWORD, etc.).
 
 **Fix**: Modified [app/core/config.py](app/core/config.py) to:
+
 1. Add `extra = "ignore"` to Config class:
+
 ```python
 class Config:
     env_file = ".env"
@@ -1056,6 +1162,7 @@ class Config:
 ```
 
 2. Added missing Stripe price ID fields:
+
 ```python
 # Stripe Settings
 STRIPE_PRICE_ID_STARTER: str = ""
@@ -1071,11 +1178,14 @@ STRIPE_PRICE_ID_ENTERPRISE: str = ""
 ---
 
 ### 5. Subscription Pricing Updates
+
 **Change**: Updated pricing tiers to round numbers for better marketing:
+
 - Small Business: $99/mo → **$100/mo**
 - Enterprise base: $499/mo → **$500/mo**
 
 **Files Modified**:
+
 - [app/models/subscription.py](app/models/subscription.py#L38-L40) - Updated pricing in enum docstring
 - [app/models/subscription.py](app/models/subscription.py#L61-L70) - Updated `base_price_usd` property
 - [docs/project-summary.md](docs/project-summary.md#L56-L62) - Updated documentation
@@ -1093,6 +1203,7 @@ STRIPE_PRICE_ID_ENTERPRISE: str = ""
 **Symptom**: "Server error. Please try again" with no details
 
 **Debug Steps**:
+
 1. Check API logs: `docker-compose logs api --tail=50`
 2. Look for Python stack traces (ValueError, ValidationError, DataError, etc.)
 3. Common causes:
@@ -1102,6 +1213,7 @@ STRIPE_PRICE_ID_ENTERPRISE: str = ""
    - Pydantic validation errors (see Fix #4)
 
 **Key Log Locations**:
+
 - API logs: `docker-compose logs api -f`
 - Worker logs: `docker-compose logs worker -f`
 - Database logs: `docker-compose logs db -f`
@@ -1109,12 +1221,14 @@ STRIPE_PRICE_ID_ENTERPRISE: str = ""
 ### Dependency Version Issues
 
 **When adding/updating dependencies**:
+
 1. Check compatibility matrix for cryptographic libraries (bcrypt, passlib, python-jose)
 2. Pin exact versions in requirements.txt
 3. Rebuild Docker containers: `docker-compose down && docker-compose up --build -d`
 4. Test authentication flow immediately after rebuild
 
 **Current Pinned Versions** (app/models/subscription.py):
+
 - bcrypt==3.2.0 (compatible with passlib 1.7.4)
 - passlib[bcrypt]==1.7.4
 - python-jose[cryptography]==3.3.0
@@ -1124,6 +1238,7 @@ STRIPE_PRICE_ID_ENTERPRISE: str = ""
 **Symptom**: `relation "table_name" does not exist`
 
 **Fix**: Run migrations
+
 ```bash
 docker-compose exec api alembic upgrade head
 ```
@@ -1131,6 +1246,7 @@ docker-compose exec api alembic upgrade head
 **Symptom**: `invalid input value for enum`
 
 **Debug**:
+
 1. Check PostgreSQL enum values: `docker-compose exec db psql -U user -d talent_db`
 2. Run: `\dT+ subscriptionplan` to see enum values
 3. Verify SQLAlchemy models use `values_callable` for enums (see Fix #2)
@@ -1138,6 +1254,7 @@ docker-compose exec api alembic upgrade head
 ### SQLAlchemy Enum Best Practices
 
 **Always use this pattern** for enums:
+
 ```python
 # Python enum definition
 class MyEnum(str, enum.Enum):
@@ -1153,6 +1270,7 @@ my_column = Column(
 ```
 
 **Why**:
+
 - PostgreSQL stores enum values as lowercase strings
 - SQLAlchemy's default Enum() uses Python enum **names** (uppercase)
 - `values_callable` forces SQLAlchemy to use enum **values** (lowercase)
@@ -1161,6 +1279,7 @@ my_column = Column(
 ## Quick Reference for LLMs
 
 **This document contains**:
+
 - ✅ Complete data models and relationships
 - ✅ All API endpoints with auth requirements
 - ✅ Billing system with usage tracking
@@ -1172,6 +1291,7 @@ my_column = Column(
 - ✅ Common commands and troubleshooting
 
 **When modifying code**:
+
 1. Always filter queries by `tenant_id` for security
 2. Use `get_current_active_subscription()` for billing-protected endpoints
 3. Increment `candidates_used_this_month` after creating candidates
