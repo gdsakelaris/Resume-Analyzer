@@ -14,8 +14,9 @@ from uuid import UUID as UUIDType
 from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.core.database import get_db
-from app.core.deps import get_tenant_id_optional
+from app.core.deps import get_tenant_id, get_current_active_subscription
 from app.models.candidate import Candidate, CandidateStatus
+from app.models.subscription import Subscription
 from app.schemas.candidate import CandidateUploadResponse, CandidateResponse, CandidateListResponse
 from app.tasks import resume_tasks
 
@@ -36,22 +37,27 @@ async def upload_resume(
     last_name: Optional[str] = Form(None),
     email: Optional[str] = Form(None),
     db: Session = Depends(get_db),
-    tenant_id: UUIDType = Depends(get_tenant_id_optional)
+    subscription: Subscription = Depends(get_current_active_subscription)
 ):
     """
     Upload a candidate's resume for a specific job.
+
+    **Requires active subscription with available candidate slots.**
 
     This endpoint implements the competitive advantage strategy:
     - Accepts optional PII (first_name, last_name, email) for blind screening
     - Queues asynchronous processing to avoid blocking the user
     - Returns immediately with tracking ID
+    - Enforces monthly candidate limits based on subscription plan
 
     Flow:
-    1. Validate file type (PDF, DOC, DOCX)
-    2. Save file securely (UUID-based naming to prevent path traversal)
-    3. Create database record with status=UPLOADED
-    4. Queue parsing task to Celery worker
-    5. Return candidate_id for status tracking
+    1. Check subscription limits (FREE: 5/mo, STARTER: 100/mo, SMALL_BUSINESS: 250/mo, PROFESSIONAL: 1000/mo, ENTERPRISE: unlimited at $0.50/candidate)
+    2. Validate file type (PDF, DOC, DOCX)
+    3. Save file securely (UUID-based naming to prevent path traversal)
+    4. Create database record with status=UPLOADED
+    5. Increment usage counter
+    6. Queue parsing task to Celery worker
+    7. Return candidate_id for status tracking
 
     Args:
         job_id: The job posting ID this candidate is applying for
@@ -65,11 +71,22 @@ async def upload_resume(
 
     Raises:
         HTTPException 400: If file is not PDF, DOC, or DOCX
+        HTTPException 402: If monthly candidate limit reached
         HTTPException 404: If job doesn't exist
     """
     from app.models.job import Job
 
-    # 1. Validate that the job exists AND belongs to the tenant (SECURITY: prevent cross-tenant attacks)
+    # Derive tenant_id from the verified subscription
+    tenant_id = subscription.user.tenant_id
+
+    # 1. CHECK SUBSCRIPTION LIMIT (Priority check before file processing)
+    if not subscription.can_upload_candidate:
+        raise HTTPException(
+            status_code=402,
+            detail=f"Monthly candidate limit reached ({subscription.candidates_used_this_month}/{subscription.monthly_candidate_limit}). Please upgrade your plan or wait for next billing cycle."
+        )
+
+    # 2. Validate that the job exists AND belongs to the tenant (SECURITY: prevent cross-tenant attacks)
     job = db.query(Job).filter(Job.id == job_id, Job.tenant_id == tenant_id).first()
     if not job:
         raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
@@ -124,6 +141,15 @@ async def upload_resume(
         db.commit()
         db.refresh(candidate)
         logger.info(f"Created candidate {candidate.id} for job {job_id}")
+
+        # 5. INCREMENT USAGE COUNTER (Track monthly candidate usage)
+        subscription.candidates_used_this_month += 1
+        db.commit()
+        logger.info(
+            f"Subscription usage: {subscription.candidates_used_this_month}/{subscription.monthly_candidate_limit} "
+            f"({subscription.remaining_candidates} remaining)"
+        )
+
     except Exception as e:
         # Clean up file if database insert fails
         if os.path.exists(file_path):
@@ -131,7 +157,7 @@ async def upload_resume(
         logger.error(f"Failed to create candidate record: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to create candidate: {str(e)}")
 
-    # 5. Queue parsing task to Celery worker via Redis
+    # 6. Queue parsing task to Celery worker via Redis
     task = resume_tasks.parse_resume_task.delay(candidate.id)
     logger.info(f"Queued parsing task {task.id} for candidate {candidate.id}")
 
@@ -140,7 +166,7 @@ async def upload_resume(
         "job_id": job_id,
         "status": CandidateStatus.UPLOADED.value,
         "task_id": task.id,
-        "message": "Resume uploaded successfully. Parsing queued to background worker."
+        "message": f"Resume uploaded successfully. Parsing queued to background worker. ({subscription.remaining_candidates} candidates remaining this month)"
     }
 
 
@@ -149,25 +175,30 @@ async def bulk_upload_resumes(
     job_id: int,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    tenant_id: UUIDType = Depends(get_tenant_id_optional)
+    subscription: Subscription = Depends(get_current_active_subscription)
 ):
     """
     Upload a ZIP file containing multiple resumes (PDF, DOC, DOCX).
+
+    **Requires active subscription with sufficient candidate slots.**
 
     This is the KILLER FEATURE for B2B sales:
     - Recruiters export 50+ resumes as ZIP from LinkedIn/Greenhouse
     - They drag ONE file into your app
     - Your system processes all resumes automatically
+    - Respects subscription limits (stops when limit reached)
 
     This solves the "manual friction" problem and makes the tool
     sellable to businesses who need to screen hundreds of candidates.
 
     Flow:
-    1. Validate ZIP file format
-    2. Extract all resumes from ZIP (skip folders, non-resume files, __MACOSX)
-    3. Create candidate record for each resume
-    4. Queue parsing task for each candidate
-    5. Return summary of processed candidates
+    1. Check subscription limits
+    2. Validate ZIP file format
+    3. Extract all resumes from ZIP (skip folders, non-resume files, __MACOSX)
+    4. Create candidate record for each resume (up to subscription limit)
+    5. Queue parsing task for each candidate
+    6. Increment usage counter
+    7. Return summary of processed candidates
 
     Args:
         job_id: The job posting ID these candidates are applying for
@@ -178,6 +209,7 @@ async def bulk_upload_resumes(
 
     Raises:
         HTTPException 400: If file is not a ZIP
+        HTTPException 402: If monthly candidate limit reached
         HTTPException 404: If job doesn't exist
         HTTPException 500: If extraction fails
 
@@ -186,12 +218,24 @@ async def bulk_upload_resumes(
             "message": "Bulk upload processed. 47 candidates created.",
             "job_id": 123,
             "processed_count": 47,
-            "skipped_count": 3
+            "skipped_count": 3,
+            "limit_reached": false,
+            "remaining_candidates": 53
         }
     """
     from app.models.job import Job
 
-    # 1. Validate that the job exists AND belongs to the tenant (SECURITY: prevent cross-tenant attacks)
+    # Derive tenant_id from the verified subscription
+    tenant_id = subscription.user.tenant_id
+
+    # 1. CHECK SUBSCRIPTION LIMIT
+    if not subscription.can_upload_candidate:
+        raise HTTPException(
+            status_code=402,
+            detail=f"Monthly candidate limit reached ({subscription.candidates_used_this_month}/{subscription.monthly_candidate_limit}). Please upgrade your plan or wait for next billing cycle."
+        )
+
+    # 2. Validate that the job exists AND belongs to the tenant (SECURITY: prevent cross-tenant attacks)
     job = db.query(Job).filter(Job.id == job_id, Job.tenant_id == tenant_id).first()
     if not job:
         raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
@@ -217,12 +261,22 @@ async def bulk_upload_resumes(
 
     processed_count = 0
     skipped_count = 0
+    limit_reached = False
 
     # 4. Extract and process resume files from ZIP
     ALLOWED_EXTENSIONS = ('.pdf', '.doc', '.docx')
     try:
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
             for filename in zip_ref.namelist():
+                # CHECK LIMIT BEFORE EACH FILE (stop processing if limit reached)
+                if not subscription.can_upload_candidate:
+                    logger.warning(
+                        f"Subscription limit reached during bulk upload. "
+                        f"Processed {processed_count} files, stopping."
+                    )
+                    limit_reached = True
+                    break
+
                 # Skip folders and non-resume files
                 # Also skip macOS metadata folders (.__MACOSX, .DS_Store)
                 filename_lower = filename.lower()
@@ -261,6 +315,10 @@ async def bulk_upload_resumes(
                     db.commit()
                     db.refresh(candidate)
 
+                    # INCREMENT USAGE COUNTER for each processed candidate
+                    subscription.candidates_used_this_month += 1
+                    db.commit()
+
                     # Queue parsing task for this candidate
                     task = resume_tasks.parse_resume_task.delay(candidate.id)
                     logger.info(f"Created candidate {candidate.id}, queued task {task.id}")
@@ -280,14 +338,21 @@ async def bulk_upload_resumes(
 
         logger.info(
             f"Bulk upload complete for job {job_id}: "
-            f"{processed_count} processed, {skipped_count} skipped"
+            f"{processed_count} processed, {skipped_count} skipped, "
+            f"limit_reached={limit_reached}"
         )
 
+        message = f"Bulk upload processed. {processed_count} candidates created."
+        if limit_reached:
+            message += f" Subscription limit reached ({subscription.monthly_candidate_limit}/month). Upgrade to process more candidates."
+
         return {
-            "message": f"Bulk upload processed. {processed_count} candidates created.",
+            "message": message,
             "job_id": job_id,
             "processed_count": processed_count,
-            "skipped_count": skipped_count
+            "skipped_count": skipped_count,
+            "limit_reached": limit_reached,
+            "remaining_candidates": subscription.remaining_candidates
         }
 
     except zipfile.BadZipFile:
@@ -314,7 +379,7 @@ def get_candidate(
     job_id: int,
     candidate_id: int,
     db: Session = Depends(get_db),
-    tenant_id: UUIDType = Depends(get_tenant_id_optional)
+    tenant_id: UUIDType = Depends(get_tenant_id)
 ):
     """
     Get a candidate's details and processing status.
@@ -359,7 +424,7 @@ def list_candidates(
     limit: int = 100,
     status: Optional[CandidateStatus] = None,
     db: Session = Depends(get_db),
-    tenant_id: UUIDType = Depends(get_tenant_id_optional)
+    tenant_id: UUIDType = Depends(get_tenant_id)
 ):
     """
     List all candidates for a job with optional status filtering.
@@ -418,7 +483,7 @@ def get_candidate_file(
     job_id: int,
     candidate_id: int,
     db: Session = Depends(get_db),
-    tenant_id: UUIDType = Depends(get_tenant_id_optional)
+    tenant_id: UUIDType = Depends(get_tenant_id)
 ):
     """
     Download or view a candidate's resume file.
@@ -466,7 +531,7 @@ def get_candidate_evaluation(
     job_id: int,
     candidate_id: int,
     db: Session = Depends(get_db),
-    tenant_id: UUIDType = Depends(get_tenant_id_optional)
+    tenant_id: UUIDType = Depends(get_tenant_id)
 ):
     """
     Get the AI evaluation for a candidate.
@@ -523,7 +588,7 @@ def delete_candidate(
     job_id: int,
     candidate_id: int,
     db: Session = Depends(get_db),
-    tenant_id: UUIDType = Depends(get_tenant_id_optional)
+    tenant_id: UUIDType = Depends(get_tenant_id)
 ):
     """
     Delete a candidate and their resume file.

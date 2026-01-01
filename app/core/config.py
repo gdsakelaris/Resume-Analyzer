@@ -45,8 +45,10 @@ class Settings(BaseSettings):
     # Stripe Settings
     STRIPE_API_KEY: str = ""
     STRIPE_WEBHOOK_SECRET: str = ""
-    STRIPE_PRICE_ID_STARTER: str = ""     # Stripe Price ID for Starter plan
-    STRIPE_PRICE_ID_PROFESSIONAL: str = "" # Stripe Price ID for Professional plan
+    STRIPE_PRICE_ID_STARTER: str = ""           # Stripe Price ID for Starter plan
+    STRIPE_PRICE_ID_SMALL_BUSINESS: str = ""    # Stripe Price ID for Small Business plan
+    STRIPE_PRICE_ID_PROFESSIONAL: str = ""      # Stripe Price ID for Professional plan
+    STRIPE_PRICE_ID_ENTERPRISE: str = ""        # Stripe Price ID for Enterprise plan
 
     # CORS Settings - can be set as JSON string in .env
     BACKEND_CORS_ORIGINS: Union[List[str], str] = ["http://localhost:3000", "http://localhost:8000"]
@@ -66,6 +68,7 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = True
+        extra = "ignore"  # Ignore extra fields in .env that aren't in Settings
 
 
 settings = Settings()

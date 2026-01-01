@@ -5,8 +5,8 @@ from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.deps import get_current_user, get_tenant_id, get_tenant_id_optional
-from app.models.user import User
+from app.core.deps import get_tenant_id, get_current_active_subscription
+from app.models.subscription import Subscription
 from app.crud import job as job_crud
 from app.models.job import JobStatus
 from app.schemas.job import JobCreateRequest, JobUpdateRequest, JobResponse, JobCreateResponse, JobStatusEnum
@@ -20,10 +20,12 @@ logger = logging.getLogger(__name__)
 def create_job(
     request: JobCreateRequest,
     db: Session = Depends(get_db),
-    tenant_id: UUID = Depends(get_tenant_id_optional)
+    subscription: Subscription = Depends(get_current_active_subscription)
 ):
     """
     Create a new job posting and queue AI config generation via Celery.
+
+    **Requires active subscription** (FREE, STARTER, PROFESSIONAL, or ENTERPRISE).
 
     The job is created immediately with status=PENDING, and processing
     happens asynchronously in a Celery worker via Redis.
@@ -38,6 +40,9 @@ def create_job(
     Use GET /jobs/{job_id} to check status and get results.
     """
     try:
+        # Derive tenant_id from the verified subscription
+        tenant_id = subscription.user.tenant_id
+
         # Create job using CRUD layer (with tenant_id)
         new_job = job_crud.create(db, request, tenant_id=tenant_id)
 
@@ -67,7 +72,7 @@ def create_job(
 def get_job(
     job_id: int,
     db: Session = Depends(get_db),
-    tenant_id: UUID = Depends(get_tenant_id_optional)
+    tenant_id: UUID = Depends(get_tenant_id)
 ):
     """
     Retrieve a job by ID (tenant-scoped).
@@ -92,7 +97,7 @@ def list_jobs(
     limit: int = 100,
     status: Optional[JobStatusEnum] = None,
     db: Session = Depends(get_db),
-    tenant_id: UUID = Depends(get_tenant_id_optional)
+    tenant_id: UUID = Depends(get_tenant_id)
 ):
     """
     List all jobs for current tenant with pagination and optional status filtering.
@@ -117,7 +122,7 @@ def update_job(
     job_id: int,
     request: JobUpdateRequest,
     db: Session = Depends(get_db),
-    tenant_id: UUID = Depends(get_tenant_id_optional)
+    tenant_id: UUID = Depends(get_tenant_id)
 ):
     """
     Update a job's basic information (title, description, location, etc).
@@ -138,7 +143,7 @@ def update_job(
 def delete_job(
     job_id: int,
     db: Session = Depends(get_db),
-    tenant_id: UUID = Depends(get_tenant_id_optional)
+    tenant_id: UUID = Depends(get_tenant_id)
 ):
     """
     Delete a job by ID (tenant-scoped).

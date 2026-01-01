@@ -1,14 +1,16 @@
 # Starscreen - Technical Reference
 
+> **📋 LLM Code Assistant Note**: This document provides comprehensive context for AI coding assistants working on the Starscreen codebase. It contains complete architectural decisions, implementation patterns, data models, API structures, and critical bug fixes. Feed this document to LLMs (Claude, GPT-4, etc.) to provide full project context for code modifications, debugging, and feature development.
+
 **Purpose**: AI resume screening with hybrid scoring (GPT-4o + deterministic Python)
 
-**Status**: Phase 1 Complete - Multi-tenant SaaS with JWT authentication, Stripe billing, and complete authentication UI
+**Status**: Phase 1 Complete - Multi-tenant SaaS with JWT authentication, Stripe billing enforcement, and complete authentication UI
 
 ## Stack
 - **API**: FastAPI (Python) + Celery workers
 - **Database**: PostgreSQL (Alembic migrations)
 - **Queue**: Redis
-- **AI**: OpenAI GPT-4o (temp=0.0)
+- **AI**: OpenAI GPT-4o (temp=0.2)
 - **Frontend**: Alpine.js + Tailwind CSS (static files)
 - **Parsing**: pdfplumber, docx2txt
 - **Auth**: JWT (stateless, HS256), localStorage-based token management
@@ -44,13 +46,20 @@ id (UUID, PK)
 user_id (FK -> users.id, unique)
 stripe_customer_id (unique, nullable)
 stripe_subscription_id (unique, nullable)
-plan: ENUM(free, starter, professional, enterprise)
+plan: ENUM(free, starter, small_business, professional, enterprise)
 status: ENUM(trialing, active, past_due, canceled, unpaid)
-monthly_candidate_limit (integer)
+monthly_candidate_limit (integer, default=5)
 candidates_used_this_month (integer, default=0)
 current_period_start (datetime)
 current_period_end (datetime)
 ```
+
+**Pricing Tiers (Enforced)**:
+- **FREE**: $0/mo - 5 candidates/month (trial tier)
+- **STARTER**: $50/mo - 100 candidates/month (solo recruiters)
+- **SMALL_BUSINESS**: $99/mo - 250 candidates/month (small teams)
+- **PROFESSIONAL**: $200/mo - 1000 candidates/month (growing companies)
+- **ENTERPRISE**: $499/mo base + $0.50/candidate - Unlimited (high-volume recruiting)
 
 ### jobs
 ```python
@@ -146,9 +155,10 @@ created_at
 **Token Structure** (HS256 signed):
 ```json
 {
-  "sub": "user_email@example.com",
-  "tenant_id": "uuid-here",
-  "exp": 1234567890
+  "sub": "user-uuid-here",
+  "tenant_id": "tenant-uuid-here",
+  "exp": 1234567890,
+  "type": "refresh"  // Only present in refresh tokens
 }
 ```
 
@@ -228,10 +238,11 @@ def validate_password_strength(cls, v: str) -> str:
 - All queries filter by `tenant_id` via dependency injection
 - Dependency: `get_tenant_id(token)` extracts tenant_id from JWT
 
-**Development Mode**:
-- Currently using `get_tenant_id_optional()` in jobs.py and candidates.py
-- Allows testing without authentication
-- **Production**: Replace with `get_tenant_id()` to enforce auth
+**Production Mode** (Enforced):
+- ✅ All endpoints now require authentication via `get_tenant_id()` or `get_current_active_subscription()`
+- ✅ Job creation requires active subscription
+- ✅ Candidate upload enforces monthly limits based on plan
+- ✅ Bulk upload respects limits (stops gracefully when reached)
 
 **Tenant Isolation**:
 ```python
@@ -432,6 +443,103 @@ selectedCandidate: null,  // Candidate being viewed in modal
 **Data Retention**:
 - CASCADE DELETE: Deleting user deletes all jobs/candidates/evaluations
 
+## Billing & Subscription System
+
+### Pricing Model (app/models/subscription.py)
+
+**5-Tier SaaS Pricing**:
+
+| Tier | Monthly Price | Candidates/Month | Cost Per Candidate | Target Market |
+|------|--------------|------------------|-------------------|---------------|
+| **FREE** | $0 | 5 | Free | Trial/Testing |
+| **STARTER** | $50 | 100 | $0.50 | Solo Recruiters |
+| **SMALL_BUSINESS** | $99 | 250 | $0.40 | Small Teams |
+| **PROFESSIONAL** | $200 | 1,000 | $0.20 | Growing Companies |
+| **ENTERPRISE** | $499 base + $0.50/candidate | Unlimited | Variable | High-Volume |
+
+**Enterprise Billing Examples**:
+- 500 candidates: $499 + (500 × $0.50) = **$749** ($1.50/candidate)
+- 1,000 candidates: $499 + (1,000 × $0.50) = **$999** ($1.00/candidate)
+- 2,000 candidates: $499 + (2,000 × $0.50) = **$1,499** ($0.75/candidate)
+
+### Enforcement Points
+
+**1. Job Creation** (app/api/endpoints/jobs.py:create_job)
+```python
+@router.post("/")
+def create_job(
+    subscription: Subscription = Depends(get_current_active_subscription)
+):
+    # Requires ACTIVE or TRIALING subscription status
+    # Blocks PAST_DUE, CANCELED, UNPAID
+```
+
+**2. Candidate Upload** (app/api/endpoints/candidates.py:upload_resume)
+```python
+@router.post("/upload")
+def upload_resume(
+    subscription: Subscription = Depends(get_current_active_subscription)
+):
+    # 1. Check: subscription.can_upload_candidate
+    # 2. Upload file and create candidate
+    # 3. Increment: subscription.candidates_used_this_month += 1
+    # 4. Return remaining candidates in response
+```
+
+**3. Bulk Upload** (app/api/endpoints/candidates.py:bulk_upload_resumes)
+```python
+@router.post("/bulk-upload-zip")
+def bulk_upload_resumes(...):
+    # Checks limit BEFORE EACH FILE in ZIP
+    # Stops gracefully when limit reached
+    # Returns: processed_count, limit_reached, remaining_candidates
+```
+
+### Usage Tracking
+
+**Subscription Properties** (app/models/subscription.py):
+```python
+subscription.can_upload_candidate       # bool: Has remaining quota?
+subscription.remaining_candidates       # int: How many left this month
+subscription.usage_percentage           # float: 0-100% of quota used
+subscription.estimated_monthly_cost     # float: Total cost for period
+subscription.calculate_monthly_cost()   # Method: Base + usage charges
+```
+
+**Monthly Reset**:
+- Currently: Manual reset required (Stripe webhook integration needed)
+- Future: Automated via `subscription.updated` webhook event
+- Reset logic: `candidates_used_this_month = 0` at billing cycle renewal
+
+### Error Responses
+
+**HTTP 402 Payment Required**:
+```json
+{
+  "detail": "Monthly candidate limit reached (5/5). Please upgrade your plan or wait for next billing cycle."
+}
+```
+
+**HTTP 402 Inactive Subscription**:
+```json
+{
+  "detail": "Subscription is past_due. Please update your payment method."
+}
+```
+
+### Stripe Integration
+
+**Webhook Events** (app/api/endpoints/stripe_webhooks.py):
+- `invoice.payment_succeeded` → Update status to ACTIVE
+- `invoice.payment_failed` → Update status to PAST_DUE
+- `customer.subscription.updated` → Sync plan changes
+- `customer.subscription.deleted` → Update status to CANCELED
+
+**Metered Billing** (Enterprise only):
+- Reports usage to Stripe via API: `stripe.SubscriptionItem.create_usage_record()`
+- Billed monthly based on `candidates_used_this_month`
+- Base fee charged regardless of usage
+
 ## Code Structure
 
 ```
@@ -491,32 +599,38 @@ Resume-Analyzer/
 
 **Required**:
 ```bash
-# Database
-DATABASE_URL=postgresql://starscreen:password@db:5432/starscreen
-
-# Redis (Celery)
-CELERY_BROKER_URL=redis://redis:6379/0
-CELERY_RESULT_BACKEND=redis://redis:6379/0
-
 # OpenAI
 OPENAI_API_KEY=sk-...
+OPENAI_MODEL=gpt-4o
+OPENAI_TEMPERATURE=0.2
 
 # JWT Authentication
-SECRET_KEY=<openssl rand -hex 32>
+SECRET_KEY=<openssl rand -hex 32>  # Generate with: openssl rand -hex 32
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=30
 REFRESH_TOKEN_EXPIRE_DAYS=7
+
+# Note: Database and Redis configs are in docker-compose.yml
+# If you need to override them, you can set:
+# POSTGRES_USER=user
+# POSTGRES_PASSWORD=password
+# POSTGRES_DB=talent_db
+# POSTGRES_SERVER=db  # or localhost for local access
+# REDIS_HOST=redis
 ```
 
-**Optional** (Stripe - skip for testing):
+**Optional** (Stripe):
 ```bash
-STRIPE_API_KEY=sk_test_...
+STRIPE_API_KEY=sk_test_... # or sk_live_... for production
 STRIPE_WEBHOOK_SECRET=whsec_...
 STRIPE_PRICE_ID_STARTER=price_...
+STRIPE_PRICE_ID_SMALL_BUSINESS=price_...
 STRIPE_PRICE_ID_PROFESSIONAL=price_...
+STRIPE_PRICE_ID_ENTERPRISE_BASE=price_... # Base subscription
+STRIPE_PRICE_ID_ENTERPRISE_USAGE=price_... # Metered billing for per-candidate charge
 ```
 
-**Note**: Without Stripe keys, app works fine - all users get FREE trial subscriptions.
+**Note**: Without Stripe keys, app still enforces billing - all users get FREE tier (5 candidates/month) until they upgrade.
 
 ## Common Commands
 
@@ -547,7 +661,7 @@ docker-compose exec api alembic upgrade head
 docker-compose exec api alembic revision --autogenerate -m "Description"
 
 # Access database
-docker-compose exec db psql -U starscreen -d starscreen
+docker-compose exec db psql -U user -d talent_db
 
 # Reset database (WARNING: deletes all data)
 docker-compose down -v
@@ -665,6 +779,15 @@ curl -X GET http://localhost:8000/api/v1/jobs/$JOB_A \
 
 ### Common Errors
 
+**"Server error. Please try again" on Registration**:
+- Fixed: bcrypt 72-byte password limit error
+- Solution: [app/core/security.py](app/core/security.py#L18-L34) now truncates passwords to 72 bytes before hashing
+- Issue was caused by bcrypt initialization trying to verify passwords longer than 72 bytes
+
+**Pydantic ValidationError: "Extra inputs are not permitted"**:
+- Fixed: [app/core/config.py](app/core/config.py#L69) now has `extra = "ignore"`
+- Allows .env to have extra fields (like DATABASE_URL, CELERY_BROKER_URL) that are computed as properties
+
 **401 Unauthorized**:
 - Verify `Authorization: Bearer <token>` header format
 - Check if token expired (30 min for access token)
@@ -712,9 +835,13 @@ docker-compose exec worker celery -A app.core.celery_app purge
 ## Current Limitations & Future Work
 
 ### Phase 1 Complete ✓
-- [x] JWT authentication system
-- [x] Multi-tenant database architecture
-- [x] Stripe billing integration (optional)
+- [x] JWT authentication system (stateless, HS256)
+- [x] Multi-tenant database architecture (row-level security)
+- [x] Stripe billing integration with webhook support
+- [x] **Billing enforcement** - All endpoints require active subscription
+- [x] **Usage tracking** - Monthly candidate limits enforced
+- [x] **5-tier pricing model** (FREE, STARTER, SMALL_BUSINESS, PROFESSIONAL, ENTERPRISE)
+- [x] **Enterprise metered billing** ($499 base + $0.50/candidate)
 - [x] Login/registration UI with password validation
 - [x] Token-based auth in frontend (Auth.js)
 - [x] Auto-refresh tokens on 401 errors
@@ -738,19 +865,23 @@ docker-compose exec worker celery -A app.core.celery_app purge
 - [ ] No password reset functionality
 - [ ] No API rate limiting
 - [ ] No user profile editing UI
-- [ ] Development mode uses optional auth (`get_tenant_id_optional`)
-  - Production: Replace with `get_tenant_id()` to enforce auth
+- [ ] Frontend needs usage dashboard to display remaining candidates
+- [ ] Frontend needs upgrade prompts when approaching limits
+- [ ] No automatic billing period reset (candidates_used_this_month counter)
 
 ## Security Considerations
 
 ### Current Security Measures
-- ✅ Bcrypt password hashing (72-byte limit enforced)
-- ✅ JWT tokens with expiration
-- ✅ Row-level multi-tenancy (tenant_id filtering)
+- ✅ Bcrypt password hashing with 72-byte limit enforcement (as of 2025-12-31)
+  - Passwords automatically truncated to 72 bytes in both hashing and verification
+  - Prevents ValueError crashes during authentication
+- ✅ JWT tokens with expiration (30 min access, 7 day refresh)
+- ✅ Row-level multi-tenancy (tenant_id filtering on all queries)
 - ✅ HTTPS recommended for production
-- ✅ Password strength validation (frontend + backend)
-- ✅ Pydantic validation for all inputs
-- ✅ SQL injection prevention (SQLAlchemy ORM)
+- ✅ Password strength validation (frontend real-time + backend Pydantic)
+  - Requires: 8-72 chars, uppercase, lowercase, number, special char
+- ✅ Pydantic validation for all inputs with `extra = "ignore"` in settings
+- ✅ SQL injection prevention (SQLAlchemy ORM with parameterized queries)
 
 ### Production Recommendations
 - Use environment variables for all secrets (never hardcode)
@@ -772,7 +903,7 @@ docker-compose exec worker celery -A app.core.celery_app purge
 
 ### Database Enum Types Created
 ```sql
-CREATE TYPE subscriptionplan AS ENUM ('free', 'starter', 'professional', 'enterprise');
+CREATE TYPE subscriptionplan AS ENUM ('free', 'starter', 'small_business', 'professional', 'enterprise');
 CREATE TYPE subscriptionstatus AS ENUM ('trialing', 'active', 'past_due', 'canceled', 'unpaid');
 ```
 
@@ -809,8 +940,53 @@ evaluations.tenant_id
 
 ---
 
+---
+
 *Last Updated: 2025-12-31*
 
-*Phase 1 Complete - Multi-tenant SaaS with JWT auth + UI*
+*Phase 1 Complete - Multi-tenant SaaS with JWT auth, billing enforcement, and 5-tier pricing*
 
-*For LLM code assistance: This document provides complete context for understanding and modifying the Starscreen codebase. All architectural decisions, implementation patterns, and critical bugs/fixes are documented above.*
+## Recent Bug Fixes (2025-12-31)
+
+### 1. Bcrypt 72-Byte Password Limit Fix
+**Issue**: Server crashed with `ValueError: password cannot be longer than 72 bytes` during registration.
+
+**Root Cause**: Bcrypt has a hard 72-byte limit. During bcrypt initialization, it tried to verify test passwords that exceeded this limit.
+
+**Fix**: Modified [app/core/security.py](app/core/security.py):
+- `get_password_hash()`: Encodes password to UTF-8 and truncates to 72 bytes before hashing
+- `verify_password()`: Same truncation for consistency during verification
+- Added documentation comments explaining the limitation
+
+**Impact**: Registration now works reliably for all password lengths. Passwords >72 bytes are automatically truncated.
+
+### 2. Pydantic Settings Validation Error Fix
+**Issue**: API crashed on startup with `ValidationError: Extra inputs are not permitted` for DATABASE_URL, CELERY_BROKER_URL, etc.
+
+**Root Cause**: Pydantic v2 defaults to `extra = "forbid"`. The .env file had duplicate/legacy fields that were constructed as properties in Settings class.
+
+**Fix**: Modified [app/core/config.py](app/core/config.py#L69):
+- Added `extra = "ignore"` to Config class
+- Added missing Stripe plan fields: `STRIPE_PRICE_ID_SMALL_BUSINESS`, `STRIPE_PRICE_ID_ENTERPRISE`
+
+**Impact**: API now starts successfully even with extra fields in .env. More flexible configuration management.
+
+## Quick Reference for LLMs
+
+**This document contains**:
+- ✅ Complete data models and relationships
+- ✅ All API endpoints with auth requirements
+- ✅ Billing system with usage tracking
+- ✅ Pricing tiers and enforcement logic
+- ✅ Frontend authentication patterns
+- ✅ Celery task workflows
+- ✅ Multi-tenancy implementation
+- ✅ Known issues and future work
+- ✅ Common commands and troubleshooting
+
+**When modifying code**:
+1. Always filter queries by `tenant_id` for security
+2. Use `get_current_active_subscription()` for billing-protected endpoints
+3. Increment `candidates_used_this_month` after creating candidates
+4. Check `subscription.can_upload_candidate` before processing files
+5. Return remaining quota in API responses for UX feedback
