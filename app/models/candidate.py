@@ -46,6 +46,12 @@ class Candidate(Base):
     phone = Column(String, nullable=True)
     location = Column(String, nullable=True)
 
+    # Web Presence URLs
+    linkedin_url = Column(String, nullable=True)
+    github_url = Column(String, nullable=True)
+    portfolio_url = Column(String, nullable=True)
+    other_urls = Column(JSONB, nullable=True)  # Catch-all for any other URLs
+
     # File Storage
     file_path = Column(String, nullable=False)  # S3 key or local path
     original_filename = Column(String, nullable=False)

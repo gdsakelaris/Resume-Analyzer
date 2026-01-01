@@ -3,7 +3,7 @@ Pydantic schemas for Candidate API requests/responses.
 """
 
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel, Field, EmailStr
 from app.models.candidate import CandidateStatus
 
@@ -15,6 +15,12 @@ class CandidateBase(BaseModel):
     email: Optional[EmailStr] = Field(None, description="Candidate email (optional for blind screening)")
     phone: Optional[str] = Field(None, description="Candidate phone number (optional for blind screening)")
     location: Optional[str] = Field(None, description="Candidate location (optional for blind screening)")
+
+    # Web Presence URLs
+    linkedin_url: Optional[str] = Field(None, description="LinkedIn Profile URL")
+    github_url: Optional[str] = Field(None, description="GitHub Profile URL")
+    portfolio_url: Optional[str] = Field(None, description="Portfolio URL")
+    other_urls: Optional[List[str]] = Field(None, description="List of other URLs found on resume")
 
 
 class CandidateUploadResponse(BaseModel):
@@ -50,6 +56,10 @@ class CandidateListResponse(BaseModel):
     email: Optional[str]
     phone: Optional[str]
     location: Optional[str]
+    linkedin_url: Optional[str]
+    github_url: Optional[str]
+    portfolio_url: Optional[str]
+    other_urls: Optional[List[str]]
     original_filename: str
     status: CandidateStatus
     error_message: Optional[str] = None

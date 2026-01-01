@@ -119,8 +119,9 @@ CANDIDATE RESUME:
 --------------------------------------------------------
 YOUR TASK:
 1. Extract contact info (First Name, Last Name, Email, Phone, Location).
-2. For EACH category in the Job Configuration, assign a competence_score (0-100).
-3. Cite specific evidence from the resume in your reasoning.
+2. Extract URLs (LinkedIn, GitHub, Portfolio, and ANY other URLs found).
+3. For EACH category in the Job Configuration, assign a competence_score (0-100).
+4. Cite specific evidence from the resume in your reasoning.
 
 Output strictly valid JSON:
 {{
@@ -129,17 +130,23 @@ Output strictly valid JSON:
         "last_name": "string or null",
         "email": "string or null",
         "phone": "string or null",
-        "location": "string or null"
+        "location": "string or null",
+
+        "linkedin_url": "string or null",
+        "github_url": "string or null",
+        "portfolio_url": "string or null",
+
+        "all_other_urls": ["url1", "url2"]
     }},
-    "summary": "3-4 sentence professional assessment of overall fit",
+    "summary": "Detailed 2-paragraph executive summary. First paragraph on experience/skills match. Second paragraph on soft skills and potential role fit.",
     "category_scores": {{
         "Exact Category Name From Config": {{
             "score": (integer 0-100),
-            "reasoning": "1-2 sentences citing specific evidence from resume"
+            "reasoning": "Concise 1-sentence justification."
         }}
     }},
-    "pros": ["specific strength 1", "specific strength 2"],
-    "cons": ["specific gap 1", "specific gap 2"]
+    "pros": ["Detailed strength 1 (1-2 sentences)", "Detailed strength 2 (1-2 sentences)", "Detailed strength 3 (1-2 sentences)"],
+    "cons": ["Detailed observation 1 (1-2 sentences)", "Detailed observation 2 (1-2 sentences)"]
 }}
 
 IMPORTANT: Do NOT include a "match_score" field. Python will calculate that.
@@ -164,7 +171,7 @@ IMPORTANT: Do NOT include a "match_score" field. Python will calculate that.
         logger.info(f"[Task {self.request.id}] AI processing complete. Updating Candidate info...")
 
         # ============================================================
-        # 1. UPDATE CANDIDATE CONTACT INFO
+        # 1. UPDATE CANDIDATE CONTACT INFO & URLs
         # ============================================================
         contact_info = ai_result.get("extracted_contact_info", {})
         if contact_info:
@@ -180,7 +187,33 @@ IMPORTANT: Do NOT include a "match_score" field. Python will calculate that.
             if contact_info.get("location") and not candidate.location:
                 candidate.location = contact_info.get("location")
 
+            # Smart URL Sorting
+            other_urls_list = contact_info.get("all_other_urls", []) or []
+
+            # 1. LinkedIn
+            if contact_info.get("linkedin_url") and not candidate.linkedin_url:
+                candidate.linkedin_url = contact_info.get("linkedin_url")
+
+            # 2. GitHub
+            if contact_info.get("github_url") and not candidate.github_url:
+                candidate.github_url = contact_info.get("github_url")
+
+            # 3. Portfolio
+            if contact_info.get("portfolio_url") and not candidate.portfolio_url:
+                candidate.portfolio_url = contact_info.get("portfolio_url")
+
+            # 4. Save the rest - Clean the list: remove duplicates and remove URLs we already assigned
+            final_others = []
+            assigned_urls = [candidate.linkedin_url, candidate.github_url, candidate.portfolio_url]
+
+            for url in other_urls_list:
+                if url and url not in assigned_urls and url not in final_others:
+                    final_others.append(url)
+
+            candidate.other_urls = final_others if final_others else None
+
             logger.info(f"[Task {self.request.id}] Extracted contact info: {candidate.first_name} {candidate.last_name} | {candidate.phone} | {candidate.location} | {candidate.email}")
+            logger.info(f"[Task {self.request.id}] Extracted URLs: LinkedIn={candidate.linkedin_url}, GitHub={candidate.github_url}, Portfolio={candidate.portfolio_url}, Other={len(final_others)} URLs")
 
         # ============================================================
         # PYTHON DOES THE MATH (Deterministic Weighted Scoring)
