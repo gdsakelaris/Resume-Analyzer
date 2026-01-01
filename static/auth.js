@@ -224,7 +224,7 @@ const Auth = {
  */
 document.addEventListener('DOMContentLoaded', function() {
     // List of pages that DON'T require authentication
-    const publicPages = ['login.html', 'register.html'];
+    const publicPages = ['login.html', 'register.html', 'pricing.html', 'checkout.html'];
 
     const currentPage = window.location.pathname.split('/').pop();
     const isPublicPage = publicPages.some(page => currentPage.includes(page));
