@@ -111,6 +111,13 @@ async def create_subscription(
         if not tier_config:
             raise HTTPException(status_code=400, detail=f"Invalid tier: {request.tier}")
 
+        # Validate price_id is set
+        if not tier_config['price_id']:
+            logger.error(f"Stripe price ID for tier {request.tier} is not configured! Check environment variables.")
+            raise HTTPException(status_code=500, detail=f"Stripe price ID not configured for {request.tier}")
+
+        logger.info(f"Using Stripe price ID: {tier_config['price_id']}")
+
         # Ensure Stripe API key is set
         if not stripe.api_key:
             logger.error("Stripe API key is not set!")
@@ -149,17 +156,23 @@ async def create_subscription(
             )
 
         # Create Stripe subscription (no trial - charge immediately)
-        stripe_subscription = stripe.Subscription.create(
-            customer=subscription.stripe_customer_id,
-            items=[{
-                'price': tier_config['price_id'],
-            }],
-            metadata={
-                'user_id': str(current_user.id),
-                'tenant_id': str(current_user.tenant_id),
-                'plan': request.tier
-            }
-        )
+        try:
+            logger.info(f"Creating Stripe subscription with price: {tier_config['price_id']}, customer: {subscription.stripe_customer_id}")
+            stripe_subscription = stripe.Subscription.create(
+                customer=subscription.stripe_customer_id,
+                items=[{
+                    'price': tier_config['price_id'],
+                }],
+                metadata={
+                    'user_id': str(current_user.id),
+                    'tenant_id': str(current_user.tenant_id),
+                    'plan': request.tier
+                }
+            )
+            logger.info(f"Stripe subscription created successfully: {stripe_subscription.id}")
+        except Exception as e:
+            logger.error(f"Failed to create Stripe subscription: {type(e).__name__}: {str(e)}")
+            raise
 
         # Update local subscription record
         subscription.stripe_subscription_id = stripe_subscription.id
