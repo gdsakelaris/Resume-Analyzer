@@ -337,7 +337,8 @@
 
                     initStripe() {
                         // Initialize Stripe with your publishable key
-                        this.stripe = Stripe('pk_live_51SkaLXDEBqlHEYXelKb3YHyhFQl2y0wQXeh3iKI83mvqccKyA1Dyk1J7VQHwy5CvCOfQURTeq0CGFGbLw1obBxDV00tkg1zYY1');
+                        // TEST MODE - Replace with live key for production
+                        this.stripe = Stripe('pk_test_51SkaLhDr2CF68sTbxqen1sZ60yWkwxHadA9SEnJiPHN5sJkRR3wf0r8bqZQSGqrGoOxiNKpXpoqxcrb1pnSBqYnP00MBTuTOLd');
                         const elements = this.stripe.elements();
 
                         // Create card element
