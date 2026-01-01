@@ -48,10 +48,19 @@
                         </a>
                         <div class="flex items-center gap-3">
                             <template x-if="isAuthenticated">
-                                <button onclick="Auth.logout()"
-                                        class="text-sm text-slate-600 hover:text-slate-900 font-medium px-3 py-2 rounded-lg hover:bg-slate-100 transition">
-                                    Logout
-                                </button>
+                                <div class="flex items-center gap-3">
+                                    <span class="text-sm text-slate-500 bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
+                                        v1.0 • Connected
+                                    </span>
+                                    <a href="/static/pricing.html"
+                                       class="text-sm text-slate-600 hover:text-brand-600 font-medium px-3 py-2 rounded-lg hover:bg-slate-100 transition">
+                                        Subscription
+                                    </a>
+                                    <button onclick="Auth.logout()"
+                                            class="text-sm text-slate-600 hover:text-slate-900 font-medium px-3 py-2 rounded-lg hover:bg-slate-100 transition">
+                                        Logout
+                                    </button>
+                                </div>
                             </template>
                             <template x-if="!isAuthenticated">
                                 <div class="flex items-center gap-3">
@@ -74,9 +83,21 @@
                 <h2 class="text-5xl font-bold text-slate-900 mb-4">
                     Simple, Transparent Pricing
                 </h2>
-                <p class="text-xl text-slate-600 mb-8">
+                <p class="text-xl text-slate-600 mb-4">
                     Start free, upgrade as you grow. No hidden fees.
                 </p>
+
+                <!-- Current Plan Indicator -->
+                <template x-if="isAuthenticated && currentPlan">
+                    <div class="inline-flex items-center gap-2 bg-brand-50 border border-brand-200 px-4 py-2 rounded-full mb-4">
+                        <svg class="w-5 h-5 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <span class="text-sm font-medium text-brand-900">
+                            Current Plan: <span class="font-bold" x-text="currentPlan"></span>
+                        </span>
+                    </div>
+                </template>
 
                 <!-- Billing Toggle -->
                 <div class="flex items-center justify-center gap-3 mb-12">
@@ -141,71 +162,20 @@
                         </button>
                     </div>
 
-                    <!-- Starter Plan -->
-                    <div class="bg-white rounded-2xl shadow-lg border-2 border-slate-200 p-8 hover:shadow-xl transition">
-                        <div class="text-center mb-6">
-                            <h3 class="text-2xl font-bold text-slate-900 mb-2">Starter</h3>
-                            <div class="mb-4">
-                                <span class="text-5xl font-bold text-slate-900"
-                                    x-text="billingPeriod === 'monthly' ? '$49' : '$39'"></span>
-                                <span class="text-slate-600">/month</span>
-                            </div>
-                            <p class="text-slate-600 text-sm">For small teams and recruiters</p>
-                        </div>
-
-                        <ul class="space-y-3 mb-8">
-                            <li class="flex items-start gap-2">
-                                <svg class="w-5 h-5 text-green-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                </svg>
-                                <span class="text-slate-700 font-semibold">100 candidates/month</span>
-                            </li>
-                            <li class="flex items-start gap-2">
-                                <svg class="w-5 h-5 text-green-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                </svg>
-                                <span class="text-slate-700">AI resume scoring</span>
-                            </li>
-                            <li class="flex items-start gap-2">
-                                <svg class="w-5 h-5 text-green-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                </svg>
-                                <span class="text-slate-700">Bulk upload (ZIP)</span>
-                            </li>
-                            <li class="flex items-start gap-2">
-                                <svg class="w-5 h-5 text-green-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                </svg>
-                                <span class="text-slate-700">Advanced analytics</span>
-                            </li>
-                            <li class="flex items-start gap-2">
-                                <svg class="w-5 h-5 text-green-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                </svg>
-                                <span class="text-slate-700">Email support</span>
-                            </li>
-                        </ul>
-
-                        <button @click="selectPlan('starter', billingPeriod)"
-                            class="w-full bg-brand-600 text-white font-semibold py-3 rounded-lg hover:bg-brand-700 transition">
-                            Start Free Trial
-                        </button>
-                    </div>
-
-                    <!-- Small Business Plan (Popular) -->
+                    <!-- Starter Plan (Popular) -->
                     <div class="bg-gradient-to-br from-brand-600 to-brand-700 rounded-2xl shadow-2xl border-2 border-brand-500 p-8 hover:shadow-3xl transition relative">
                         <div class="absolute -top-4 left-1/2 -translate-x-1/2 bg-yellow-400 text-slate-900 px-4 py-1 rounded-full text-sm font-bold">
                             POPULAR
                         </div>
 
                         <div class="text-center mb-6">
-                            <h3 class="text-2xl font-bold text-white mb-2">Small Business</h3>
+                            <h3 class="text-2xl font-bold text-white mb-2">Starter</h3>
                             <div class="mb-4">
                                 <span class="text-5xl font-bold text-white"
-                                    x-text="billingPeriod === 'monthly' ? '$149' : '$119'"></span>
+                                    x-text="billingPeriod === 'monthly' ? '$49' : '$39'"></span>
                                 <span class="text-brand-100">/month</span>
                             </div>
-                            <p class="text-brand-100 text-sm">For growing recruitment teams</p>
+                            <p class="text-brand-100 text-sm">For small teams and recruiters</p>
                         </div>
 
                         <ul class="space-y-3 mb-8">
@@ -213,36 +183,87 @@
                                 <svg class="w-5 h-5 text-yellow-300 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                                 </svg>
-                                <span class="text-white font-semibold">250 candidates/month</span>
+                                <span class="text-white font-semibold">100 candidates/month</span>
                             </li>
                             <li class="flex items-start gap-2">
                                 <svg class="w-5 h-5 text-yellow-300 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                                 </svg>
-                                <span class="text-white">Everything in Starter</span>
+                                <span class="text-white">AI resume scoring</span>
                             </li>
                             <li class="flex items-start gap-2">
                                 <svg class="w-5 h-5 text-yellow-300 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                                 </svg>
-                                <span class="text-white">Priority processing</span>
+                                <span class="text-white">Bulk upload (ZIP)</span>
                             </li>
                             <li class="flex items-start gap-2">
                                 <svg class="w-5 h-5 text-yellow-300 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                                 </svg>
-                                <span class="text-white">Custom branding</span>
+                                <span class="text-white">Advanced analytics</span>
                             </li>
                             <li class="flex items-start gap-2">
                                 <svg class="w-5 h-5 text-yellow-300 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                                 </svg>
-                                <span class="text-white">Priority support</span>
+                                <span class="text-white">Email support</span>
+                            </li>
+                        </ul>
+
+                        <button @click="selectPlan('starter', billingPeriod)"
+                            class="w-full bg-white text-brand-700 font-semibold py-3 rounded-lg hover:bg-brand-50 transition">
+                            Start Free Trial
+                        </button>
+                    </div>
+
+                    <!-- Small Business Plan -->
+                    <div class="bg-white rounded-2xl shadow-lg border-2 border-slate-200 p-8 hover:shadow-xl transition">
+                        <div class="text-center mb-6">
+                            <h3 class="text-2xl font-bold text-slate-900 mb-2">Small Business</h3>
+                            <div class="mb-4">
+                                <span class="text-5xl font-bold text-slate-900"
+                                    x-text="billingPeriod === 'monthly' ? '$149' : '$119'"></span>
+                                <span class="text-slate-600">/month</span>
+                            </div>
+                            <p class="text-slate-600 text-sm">For growing recruitment teams</p>
+                        </div>
+
+                        <ul class="space-y-3 mb-8">
+                            <li class="flex items-start gap-2">
+                                <svg class="w-5 h-5 text-green-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                                <span class="text-slate-700 font-semibold">250 candidates/month</span>
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <svg class="w-5 h-5 text-green-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                                <span class="text-slate-700">Everything in Starter</span>
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <svg class="w-5 h-5 text-green-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                                <span class="text-slate-700">Priority processing</span>
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <svg class="w-5 h-5 text-green-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                                <span class="text-slate-700">Custom branding</span>
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <svg class="w-5 h-5 text-green-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                                <span class="text-slate-700">Priority support</span>
                             </li>
                         </ul>
 
                         <button @click="selectPlan('small_business', billingPeriod)"
-                            class="w-full bg-white text-brand-600 font-semibold py-3 rounded-lg hover:bg-brand-50 transition">
+                            class="w-full bg-brand-600 text-white font-semibold py-3 rounded-lg hover:bg-brand-700 transition">
                             Start Free Trial
                         </button>
                     </div>
