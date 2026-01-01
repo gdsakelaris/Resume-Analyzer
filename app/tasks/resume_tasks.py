@@ -20,8 +20,12 @@ import pdfplumber
 import docx
 import docx2txt
 import os
+import tempfile
+from io import BytesIO
 from app.core.celery_app import celery_app
 from app.core.database import SessionLocal
+from app.core.storage import storage
+from app.core.config import settings
 from app.models.candidate import Candidate, CandidateStatus
 
 logger = logging.getLogger(__name__)
@@ -65,86 +69,112 @@ def parse_resume_task(self, candidate_id: int):
         logger.info(f"[Task {self.request.id}] Candidate {candidate_id} status set to PROCESSING")
 
         # Extract text based on file format
-        # In production with S3, you would:
-        # 1. Download file from S3 to temp location
-        # 2. Process it
-        # 3. Delete temp file
-        # For now, we read from the local shared volume.
+        # If using S3, download file to temp location first
+        # If using local storage, use file path directly
         file_path = candidate.file_path
+        temp_file_path = None
 
-        if not os.path.exists(file_path):
-            raise FileNotFoundError(f"Resume file not found at {file_path}")
+        try:
+            # Check if we need to download from S3
+            if settings.USE_S3:
+                # Download file from S3 to temporary location
+                logger.info(f"[Task {self.request.id}] Downloading file from S3: {file_path}")
+                file_data = storage.download_file(file_path)
 
-        # Determine file type from extension
-        file_ext = os.path.splitext(file_path)[1].lower()
-        extracted_text = ""
+                # Save to temporary file for processing
+                file_ext = os.path.splitext(candidate.original_filename)[1]
+                with tempfile.NamedTemporaryFile(delete=False, suffix=file_ext) as tmp_file:
+                    tmp_file.write(file_data.getvalue())
+                    temp_file_path = tmp_file.name
 
-        # DEFINITION: 25,000 chars is roughly 6-8 pages of text.
-        # This limit optimizes token usage for OpenAI API calls while supporting comprehensive resumes.
-        MAX_PAGES = 6
-        MAX_CHARS = 25000
+                # Use temp file for processing
+                processing_path = temp_file_path
+                logger.info(f"[Task {self.request.id}] Downloaded to temp file: {processing_path}")
+            else:
+                # Local storage - use file path directly
+                if not os.path.exists(file_path):
+                    raise FileNotFoundError(f"Resume file not found at {file_path}")
+                processing_path = file_path
 
-        if file_ext == ".pdf":
-            # Extract from PDF using pdfplumber
-            with pdfplumber.open(file_path) as pdf:
-                # Enforce Page Limit
-                pages_to_parse = pdf.pages[:MAX_PAGES]
+            # Determine file type from extension
+            file_ext = os.path.splitext(candidate.original_filename)[1].lower()
+            extracted_text = ""
 
-                for page_num, page in enumerate(pages_to_parse, 1):
-                    text = page.extract_text()
-                    if text:
-                        extracted_text += text + "\n"
-                        # Stop if we exceed char limit even within allowed pages
-                        if len(extracted_text) > MAX_CHARS:
-                            extracted_text = extracted_text[:MAX_CHARS]
-                            logger.info(f"[Task {self.request.id}] Truncated PDF at {MAX_CHARS} chars (page {page_num})")
-                            break
-                        logger.debug(f"[Task {self.request.id}] Extracted {len(text)} chars from page {page_num}")
+            # DEFINITION: 25,000 chars is roughly 6-8 pages of text.
+            # This limit optimizes token usage for OpenAI API calls while supporting comprehensive resumes.
+            MAX_PAGES = 6
+            MAX_CHARS = 25000
 
-        elif file_ext == ".docx":
-            # Extract from DOCX using docx2txt (simpler than python-docx)
-            full_text = docx2txt.process(file_path)
-            # Enforce Character Limit
-            extracted_text = full_text[:MAX_CHARS]
-            if len(full_text) > MAX_CHARS:
-                logger.info(f"[Task {self.request.id}] Truncated DOCX from {len(full_text)} to {MAX_CHARS} chars")
-            logger.debug(f"[Task {self.request.id}] Extracted {len(extracted_text)} chars from DOCX")
+            if file_ext == ".pdf":
+                # Extract from PDF using pdfplumber
+                with pdfplumber.open(processing_path) as pdf:
+                    # Enforce Page Limit
+                    pages_to_parse = pdf.pages[:MAX_PAGES]
 
-        elif file_ext == ".doc":
-            # Legacy .doc format not directly supported
-            raise ValueError(
-                "Legacy .doc format is not supported. "
-                "Please convert your resume to .docx or .pdf format and upload again."
+                    for page_num, page in enumerate(pages_to_parse, 1):
+                        text = page.extract_text()
+                        if text:
+                            extracted_text += text + "\n"
+                            # Stop if we exceed char limit even within allowed pages
+                            if len(extracted_text) > MAX_CHARS:
+                                extracted_text = extracted_text[:MAX_CHARS]
+                                logger.info(f"[Task {self.request.id}] Truncated PDF at {MAX_CHARS} chars (page {page_num})")
+                                break
+                            logger.debug(f"[Task {self.request.id}] Extracted {len(text)} chars from page {page_num}")
+
+            elif file_ext == ".docx":
+                # Extract from DOCX using docx2txt (simpler than python-docx)
+                full_text = docx2txt.process(processing_path)
+                # Enforce Character Limit
+                extracted_text = full_text[:MAX_CHARS]
+                if len(full_text) > MAX_CHARS:
+                    logger.info(f"[Task {self.request.id}] Truncated DOCX from {len(full_text)} to {MAX_CHARS} chars")
+                logger.debug(f"[Task {self.request.id}] Extracted {len(extracted_text)} chars from DOCX")
+
+            elif file_ext == ".doc":
+                # Legacy .doc format not directly supported
+                raise ValueError(
+                    "Legacy .doc format is not supported. "
+                    "Please convert your resume to .docx or .pdf format and upload again."
+                )
+
+            else:
+                raise ValueError(f"Unsupported file format: {file_ext}. Only PDF, DOC, and DOCX are supported.")
+
+            if not extracted_text.strip():
+                raise ValueError(f"No text could be extracted from this {file_ext.upper()} file. The file may be corrupted or a scanned image.")
+
+            # Save extracted text and update status
+            candidate.resume_text = extracted_text
+            candidate.status = CandidateStatus.PARSED
+            candidate.error_message = None
+            db.commit()
+
+            logger.info(
+                f"[Task {self.request.id}] Successfully extracted {len(extracted_text)} chars "
+                f"for Candidate {candidate_id}"
             )
 
-        else:
-            raise ValueError(f"Unsupported file format: {file_ext}. Only PDF, DOC, and DOCX are supported.")
+            # Chain to scoring task - Starscreen pipeline stage 2
+            from app.tasks.scoring_tasks import score_candidate_task
+            score_candidate_task.delay(candidate_id)
+            logger.info(f"[Task {self.request.id}] Queued scoring task for Candidate {candidate_id}")
 
-        if not extracted_text.strip():
-            raise ValueError(f"No text could be extracted from this {file_ext.upper()} file. The file may be corrupted or a scanned image.")
+            return {
+                "status": "success",
+                "candidate_id": candidate_id,
+                "text_length": len(extracted_text),
+                "message": "Resume parsed successfully, scoring queued"
+            }
 
-        # Save extracted text and update status
-        candidate.resume_text = extracted_text
-        candidate.status = CandidateStatus.PARSED
-        candidate.error_message = None
-        db.commit()
-
-        logger.info(
-            f"[Task {self.request.id}] Successfully extracted {len(extracted_text)} chars "
-            f"for Candidate {candidate_id}"
-        )
-
-        # Chain to scoring task - Starscreen pipeline stage 2
-        from app.tasks.scoring_tasks import score_candidate_task
-        score_candidate_task.delay(candidate_id)
-        logger.info(f"[Task {self.request.id}] Queued scoring task for Candidate {candidate_id}")
-
-        return {
-            "status": "success",
-            "candidate_id": candidate_id,
-            "text_length": len(extracted_text),
-            "message": "Resume parsed successfully, scoring queued"
-        }
+        finally:
+            # Clean up temp file if we downloaded from S3
+            if temp_file_path and os.path.exists(temp_file_path):
+                try:
+                    os.remove(temp_file_path)
+                    logger.info(f"[Task {self.request.id}] Cleaned up temp file: {temp_file_path}")
+                except Exception as e:
+                    logger.error(f"[Task {self.request.id}] Failed to clean up temp file: {e}")
 
     except FileNotFoundError as e:
         logger.error(f"[Task {self.request.id}] File not found: {e}")

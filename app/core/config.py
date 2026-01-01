@@ -50,6 +50,13 @@ class Settings(BaseSettings):
     STRIPE_PRICE_ID_PROFESSIONAL: str = ""      # Stripe Price ID for Professional plan
     STRIPE_PRICE_ID_ENTERPRISE: str = ""        # Stripe Price ID for Enterprise plan
 
+    # AWS S3 Settings
+    AWS_ACCESS_KEY_ID: str = ""                 # AWS access key (optional if using IAM roles)
+    AWS_SECRET_ACCESS_KEY: str = ""             # AWS secret key (optional if using IAM roles)
+    AWS_REGION: str = "us-east-1"               # AWS region for S3 bucket
+    S3_BUCKET_NAME: str = ""                    # S3 bucket name for resume storage
+    USE_S3: bool = False                        # Toggle S3 vs local storage (for backward compatibility)
+
     # CORS Settings - can be set as JSON string in .env
     BACKEND_CORS_ORIGINS: Union[List[str], str] = ["http://localhost:3000", "http://localhost:8000"]
 

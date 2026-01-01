@@ -15,6 +15,7 @@ from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.deps import get_tenant_id, get_current_active_subscription
+from app.core.storage import storage  # S3/Local storage abstraction
 from app.models.candidate import Candidate, CandidateStatus
 from app.models.subscription import Subscription
 from app.schemas.candidate import CandidateUploadResponse, CandidateResponse, CandidateListResponse
@@ -23,8 +24,8 @@ from app.tasks import resume_tasks
 router = APIRouter(prefix="/jobs/{job_id}/candidates", tags=["Starscreen Candidates"])
 logger = logging.getLogger(__name__)
 
-# Upload directory configuration
-# In production, this would be replaced with S3/blob storage
+# Upload directory configuration (for local storage fallback)
+# In production with S3, this is not used
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
@@ -107,19 +108,15 @@ async def upload_resume(
             detail=f"Only PDF, DOC, and DOCX files are supported. Received: {file.content_type}"
         )
 
-    # 3. Save file securely with UUID-based naming
+    # 3. Save file securely using storage backend (S3 or local)
     # This prevents:
     # - Path traversal attacks (../../etc/passwd)
-    # - Filename collisions
+    # - Filename collisions (UUID-based naming)
     # - Special character issues
-    file_ext = os.path.splitext(file.filename)[1]
-    safe_filename = f"{uuid.uuid4()}{file_ext}"
-    file_path = os.path.join(UPLOAD_DIR, safe_filename)
-
     try:
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-        logger.info(f"Saved resume to {file_path}")
+        # Upload to storage backend (S3 or local filesystem)
+        file_path = storage.upload_file(file.file, file.filename)
+        logger.info(f"Saved resume to storage: {file_path}")
     except Exception as e:
         logger.error(f"Failed to save file: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to save file: {str(e)}")
@@ -152,8 +149,10 @@ async def upload_resume(
 
     except Exception as e:
         # Clean up file if database insert fails
-        if os.path.exists(file_path):
-            os.remove(file_path)
+        try:
+            storage.delete_file(file_path)
+        except Exception as cleanup_error:
+            logger.error(f"Failed to clean up file after database error: {cleanup_error}")
         logger.error(f"Failed to create candidate record: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to create candidate: {str(e)}")
 
@@ -292,15 +291,11 @@ async def bulk_upload_resumes(
                 try:
                     source = zip_ref.open(filename)
 
-                    # Create unique filename with original extension
-                    file_ext = os.path.splitext(filename)[1]
-                    unique_filename = f"{uuid.uuid4()}{file_ext}"
-                    target_path = os.path.join(UPLOAD_DIR, unique_filename)
+                    # Upload to storage backend (S3 or local)
+                    original_filename = os.path.basename(filename)
+                    target_path = storage.upload_file(source, original_filename)
 
-                    with open(target_path, "wb") as target:
-                        shutil.copyfileobj(source, target)
-
-                    logger.info(f"Extracted {filename} to {target_path}")
+                    logger.info(f"Uploaded {filename} to storage: {target_path}")
 
                     # Create database entry for this candidate (with tenant_id)
                     candidate = Candidate(
@@ -513,17 +508,43 @@ def get_candidate_file(
             detail=f"Candidate {candidate_id} not found for job {job_id}"
         )
 
-    if not os.path.exists(candidate.file_path):
+    # Check if file exists in storage
+    if not storage.file_exists(candidate.file_path):
         raise HTTPException(
             status_code=404,
             detail=f"Resume file not found for candidate {candidate_id}"
         )
 
-    return FileResponse(
-        path=candidate.file_path,
-        filename=candidate.original_filename,
-        media_type="application/octet-stream"
-    )
+    # For S3, download file to temp location for FileResponse
+    # For local storage, file_path is already on disk
+    from app.core.config import settings
+    if settings.USE_S3:
+        try:
+            # Download from S3 to memory, then save temporarily
+            import tempfile
+            file_data = storage.download_file(candidate.file_path)
+
+            # Create temporary file
+            suffix = os.path.splitext(candidate.original_filename)[1]
+            with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp_file:
+                tmp_file.write(file_data.getvalue())
+                temp_path = tmp_file.name
+
+            return FileResponse(
+                path=temp_path,
+                filename=candidate.original_filename,
+                media_type="application/octet-stream"
+            )
+        except Exception as e:
+            logger.error(f"Failed to download file from S3: {e}")
+            raise HTTPException(status_code=500, detail="Failed to retrieve file from storage")
+    else:
+        # Local storage - file path is on disk
+        return FileResponse(
+            path=candidate.file_path,
+            filename=candidate.original_filename,
+            media_type="application/octet-stream"
+        )
 
 
 @router.get("/{candidate_id}/evaluation")
@@ -613,14 +634,13 @@ def delete_candidate(
             detail=f"Candidate {candidate_id} not found for job {job_id}"
         )
 
-    # Delete file from storage
-    if os.path.exists(candidate.file_path):
-        try:
-            os.remove(candidate.file_path)
-            logger.info(f"Deleted resume file: {candidate.file_path}")
-        except Exception as e:
-            logger.error(f"Failed to delete file {candidate.file_path}: {e}")
-            # Continue with database deletion even if file deletion fails
+    # Delete file from storage (S3 or local)
+    try:
+        storage.delete_file(candidate.file_path)
+        logger.info(f"Deleted resume file from storage: {candidate.file_path}")
+    except Exception as e:
+        logger.error(f"Failed to delete file {candidate.file_path}: {e}")
+        # Continue with database deletion even if file deletion fails
 
     # Delete database record
     db.delete(candidate)
