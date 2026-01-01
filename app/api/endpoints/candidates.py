@@ -10,9 +10,11 @@ import os
 import uuid
 import zipfile
 from typing import Optional
+from uuid import UUID as UUIDType
 from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.core.database import get_db
+from app.core.deps import get_tenant_id_optional
 from app.models.candidate import Candidate, CandidateStatus
 from app.schemas.candidate import CandidateUploadResponse, CandidateResponse, CandidateListResponse
 from app.tasks import resume_tasks
@@ -33,7 +35,8 @@ async def upload_resume(
     first_name: Optional[str] = Form(None),
     last_name: Optional[str] = Form(None),
     email: Optional[str] = Form(None),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    tenant_id: UUIDType = Depends(get_tenant_id_optional)
 ):
     """
     Upload a candidate's resume for a specific job.
@@ -66,8 +69,8 @@ async def upload_resume(
     """
     from app.models.job import Job
 
-    # 1. Validate that the job exists
-    job = db.query(Job).filter(Job.id == job_id).first()
+    # 1. Validate that the job exists AND belongs to the tenant (SECURITY: prevent cross-tenant attacks)
+    job = db.query(Job).filter(Job.id == job_id, Job.tenant_id == tenant_id).first()
     if not job:
         raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
 
@@ -104,8 +107,9 @@ async def upload_resume(
         logger.error(f"Failed to save file: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to save file: {str(e)}")
 
-    # 4. Create database entry
+    # 4. Create database entry (with tenant_id for multi-tenancy)
     candidate = Candidate(
+        tenant_id=tenant_id,
         job_id=job_id,
         first_name=first_name,
         last_name=last_name,
@@ -144,7 +148,8 @@ async def upload_resume(
 async def bulk_upload_resumes(
     job_id: int,
     file: UploadFile = File(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    tenant_id: UUIDType = Depends(get_tenant_id_optional)
 ):
     """
     Upload a ZIP file containing multiple resumes (PDF, DOC, DOCX).
@@ -186,8 +191,8 @@ async def bulk_upload_resumes(
     """
     from app.models.job import Job
 
-    # 1. Validate that the job exists
-    job = db.query(Job).filter(Job.id == job_id).first()
+    # 1. Validate that the job exists AND belongs to the tenant (SECURITY: prevent cross-tenant attacks)
+    job = db.query(Job).filter(Job.id == job_id, Job.tenant_id == tenant_id).first()
     if not job:
         raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
 
@@ -243,8 +248,9 @@ async def bulk_upload_resumes(
 
                     logger.info(f"Extracted {filename} to {target_path}")
 
-                    # Create database entry for this candidate
+                    # Create database entry for this candidate (with tenant_id)
                     candidate = Candidate(
+                        tenant_id=tenant_id,
                         job_id=job_id,
                         original_filename=os.path.basename(filename),
                         file_path=target_path,
@@ -307,7 +313,8 @@ async def bulk_upload_resumes(
 def get_candidate(
     job_id: int,
     candidate_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    tenant_id: UUIDType = Depends(get_tenant_id_optional)
 ):
     """
     Get a candidate's details and processing status.
@@ -329,9 +336,11 @@ def get_candidate(
     Raises:
         HTTPException 404: If candidate not found or doesn't belong to job
     """
+    # SECURITY: Filter by tenant_id to prevent cross-tenant access
     candidate = db.query(Candidate).filter(
         Candidate.id == candidate_id,
-        Candidate.job_id == job_id
+        Candidate.job_id == job_id,
+        Candidate.tenant_id == tenant_id
     ).first()
 
     if not candidate:
@@ -349,7 +358,8 @@ def list_candidates(
     skip: int = 0,
     limit: int = 100,
     status: Optional[CandidateStatus] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    tenant_id: UUIDType = Depends(get_tenant_id_optional)
 ):
     """
     List all candidates for a job with optional status filtering.
@@ -366,7 +376,11 @@ def list_candidates(
     if limit > 100:
         limit = 100
 
-    query = db.query(Candidate).filter(Candidate.job_id == job_id)
+    # SECURITY: Filter by tenant_id to prevent cross-tenant access
+    query = db.query(Candidate).filter(
+        Candidate.job_id == job_id,
+        Candidate.tenant_id == tenant_id
+    )
 
     if status:
         query = query.filter(Candidate.status == status)
@@ -403,7 +417,8 @@ def list_candidates(
 def get_candidate_file(
     job_id: int,
     candidate_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    tenant_id: UUIDType = Depends(get_tenant_id_optional)
 ):
     """
     Download or view a candidate's resume file.
@@ -420,9 +435,11 @@ def get_candidate_file(
     """
     from fastapi.responses import FileResponse
 
+    # SECURITY: Filter by tenant_id to prevent file access across tenants
     candidate = db.query(Candidate).filter(
         Candidate.id == candidate_id,
-        Candidate.job_id == job_id
+        Candidate.job_id == job_id,
+        Candidate.tenant_id == tenant_id
     ).first()
 
     if not candidate:
@@ -448,7 +465,8 @@ def get_candidate_file(
 def get_candidate_evaluation(
     job_id: int,
     candidate_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    tenant_id: UUIDType = Depends(get_tenant_id_optional)
 ):
     """
     Get the AI evaluation for a candidate.
@@ -465,9 +483,11 @@ def get_candidate_evaluation(
     """
     from app.models.evaluation import Evaluation
 
+    # SECURITY: Filter by tenant_id
     candidate = db.query(Candidate).filter(
         Candidate.id == candidate_id,
-        Candidate.job_id == job_id
+        Candidate.job_id == job_id,
+        Candidate.tenant_id == tenant_id
     ).first()
 
     if not candidate:
@@ -476,8 +496,10 @@ def get_candidate_evaluation(
             detail=f"Candidate {candidate_id} not found for job {job_id}"
         )
 
+    # SECURITY: Filter evaluation by tenant_id as well
     evaluation = db.query(Evaluation).filter(
-        Evaluation.candidate_id == candidate_id
+        Evaluation.candidate_id == candidate_id,
+        Evaluation.tenant_id == tenant_id
     ).first()
 
     if not evaluation:
@@ -500,7 +522,8 @@ def get_candidate_evaluation(
 def delete_candidate(
     job_id: int,
     candidate_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    tenant_id: UUIDType = Depends(get_tenant_id_optional)
 ):
     """
     Delete a candidate and their resume file.
@@ -512,9 +535,11 @@ def delete_candidate(
     Raises:
         HTTPException 404: If candidate not found
     """
+    # SECURITY: Filter by tenant_id to prevent deletion across tenants
     candidate = db.query(Candidate).filter(
         Candidate.id == candidate_id,
-        Candidate.job_id == job_id
+        Candidate.job_id == job_id,
+        Candidate.tenant_id == tenant_id
     ).first()
 
     if not candidate:

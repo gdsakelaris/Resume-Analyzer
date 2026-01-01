@@ -7,7 +7,7 @@ Tracks the resume processing pipeline from upload through parsing to scoring.
 
 from sqlalchemy import Column, Integer, String, ForeignKey, Enum, Text, DateTime, func
 from sqlalchemy.orm import relationship
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 import enum
 from app.core.database import Base
 
@@ -37,6 +37,10 @@ class Candidate(Base):
     __tablename__ = "candidates"
 
     id = Column(Integer, primary_key=True, index=True)
+
+    # Multi-tenancy: Inherited from job, but denormalized for query performance
+    tenant_id = Column(UUID(as_uuid=True), ForeignKey("users.tenant_id"), nullable=False, index=True)
+
     job_id = Column(Integer, ForeignKey("jobs.id"), nullable=False, index=True)
 
     # Candidate Metadata (optional - can be null for blind screening)

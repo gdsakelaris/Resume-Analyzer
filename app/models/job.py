@@ -1,7 +1,7 @@
 import enum
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Enum, func
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Enum, func, ForeignKey
 from sqlalchemy.orm import relationship
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from app.core.database import Base
 
 
@@ -28,6 +28,10 @@ class Job(Base):
     __tablename__ = "jobs"
 
     id = Column(Integer, primary_key=True, index=True)
+
+    # Multi-tenancy: All jobs belong to a tenant
+    tenant_id = Column(UUID(as_uuid=True), ForeignKey("users.tenant_id"), nullable=False, index=True)
+
     title = Column(String, nullable=False, index=True)
     description = Column(String, nullable=False)
     location = Column(String, nullable=True)

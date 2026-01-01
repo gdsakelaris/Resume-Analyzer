@@ -8,7 +8,7 @@ NOTE: Relevance indicators are decision-support guidance, not hiring decisions.
 """
 
 from sqlalchemy import Column, Integer, ForeignKey, Float, Text, DateTime, func
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import relationship
 from app.core.database import Base
 
@@ -26,6 +26,10 @@ class Evaluation(Base):
     __tablename__ = "evaluations"
 
     id = Column(Integer, primary_key=True, index=True)
+
+    # Multi-tenancy: Inherited from candidate, denormalized for query performance
+    tenant_id = Column(UUID(as_uuid=True), ForeignKey("users.tenant_id"), nullable=False, index=True)
+
     candidate_id = Column(Integer, ForeignKey("candidates.id"), nullable=False, unique=True, index=True)
 
     # The Headline Score (0-100)

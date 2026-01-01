@@ -32,6 +32,7 @@
             }
         </script>
 
+        <script src="/static/auth.js"></script>
         <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
         <style>
@@ -53,11 +54,17 @@
                         <img src="/images/Logo.png" alt="Starscreen Logo" class="w-10 h-10">
                         <span class="font-bold text-xl tracking-tight text-slate-800">Starscreen</span>
                     </div>
-                    <div class="flex items-center">
+                    <div class="flex items-center gap-3">
                         <span
                             class="text-sm text-slate-500 bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
                             v1.0 • Connected
                         </span>
+                        <button
+                            onclick="Auth.logout()"
+                            class="text-sm text-slate-600 hover:text-slate-900 font-medium px-3 py-2 rounded-lg hover:bg-slate-100 transition"
+                        >
+                            Logout
+                        </button>
                     </div>
                 </div>
             </div>
@@ -1099,7 +1106,7 @@
 
                     async loadJobs() {
                         try {
-                            const res = await fetch(`${API_BASE}/jobs/`);
+                            const res = await Auth.fetch(`${API_BASE}/jobs/`);
                             this.jobs = await res.json();
                             // Sort by ID desc
                             this.jobs.sort((a, b) => b.id - a.id);
@@ -1112,7 +1119,7 @@
                         if (!this.newJob.title || !this.newJob.description) return;
                         this.isCreating = true;
                         try {
-                            const res = await fetch(`${API_BASE}/jobs/`, {
+                            const res = await Auth.fetch(`${API_BASE}/jobs/`, {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify(this.newJob)
@@ -1147,7 +1154,7 @@
                         if (!this.editJobData.title || !this.editJobData.description) return;
                         this.isEditing = true;
                         try {
-                            const res = await fetch(`${API_BASE}/jobs/${this.editJobData.id}`, {
+                            const res = await Auth.fetch(`${API_BASE}/jobs/${this.editJobData.id}`, {
                                 method: 'PUT',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({
@@ -1179,7 +1186,7 @@
                     async confirmJobDelete() {
                         const jobId = this.deleteJobConfirm.job.id;
                         try {
-                            const res = await fetch(`${API_BASE}/jobs/${jobId}`, {
+                            const res = await Auth.fetch(`${API_BASE}/jobs/${jobId}`, {
                                 method: 'DELETE'
                             });
                             if (res.ok) {
@@ -1221,7 +1228,7 @@
                     async loadCandidates() {
                         if (!this.selectedJob) return;
                         try {
-                            const res = await fetch(`${API_BASE}/jobs/${this.selectedJob.id}/candidates/`);
+                            const res = await Auth.fetch(`${API_BASE}/jobs/${this.selectedJob.id}/candidates/`);
                             this.candidates = await res.json();
                             // Sort by score (highest first), then by ID (newest first)
                             this.candidates.sort((a, b) => {
@@ -1283,7 +1290,7 @@
                             this.showToast('Processing ZIP...', 'info');
 
                             try {
-                                const res = await fetch(`${API_BASE}/jobs/${this.selectedJob.id}/candidates/${endpoint}`, {
+                                const res = await Auth.fetch(`${API_BASE}/jobs/${this.selectedJob.id}/candidates/${endpoint}`, {
                                     method: 'POST',
                                     body: formData
                                 });
@@ -1309,7 +1316,7 @@
                                 formData.append('file', files[i]);
 
                                 try {
-                                    const res = await fetch(`${API_BASE}/jobs/${this.selectedJob.id}/candidates/${endpoint}`, {
+                                    const res = await Auth.fetch(`${API_BASE}/jobs/${this.selectedJob.id}/candidates/${endpoint}`, {
                                         method: 'POST',
                                         body: formData
                                     });
@@ -1388,11 +1395,11 @@
                         // If candidate is scored, fetch full evaluation details
                         if (candidate.status === 'SCORED') {
                             try {
-                                const res = await fetch(`${API_BASE}/jobs/${this.selectedJob.id}/candidates/${candidate.id}`);
+                                const res = await Auth.fetch(`${API_BASE}/jobs/${this.selectedJob.id}/candidates/${candidate.id}`);
                                 if (res.ok) {
                                     const fullData = await res.json();
                                     // Fetch evaluation separately if needed
-                                    const evalRes = await fetch(`${API_BASE}/jobs/${this.selectedJob.id}/candidates/${candidate.id}/evaluation`);
+                                    const evalRes = await Auth.fetch(`${API_BASE}/jobs/${this.selectedJob.id}/candidates/${candidate.id}/evaluation`);
                                     if (evalRes.ok) {
                                         this.candidateDetail.evaluation = await evalRes.json();
                                     }

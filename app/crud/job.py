@@ -3,26 +3,31 @@ CRUD operations for Job model.
 
 Implements the Repository pattern to encapsulate all database operations
 for jobs, providing a clean interface for the API layer.
+
+MULTI-TENANCY: All operations MUST filter by tenant_id to enforce row-level security.
 """
 
 from typing import List, Optional
+from uuid import UUID
 from sqlalchemy.orm import Session
 from app.models.job import Job, JobStatus
 from app.schemas.job import JobCreateRequest, JobUpdateRequest
 
 
-def create(db: Session, job_data: JobCreateRequest) -> Job:
+def create(db: Session, job_data: JobCreateRequest, tenant_id: UUID) -> Job:
     """
-    Create a new job in the database.
+    Create a new job in the database (tenant-scoped).
 
     Args:
         db: Database session
         job_data: Validated job creation data
+        tenant_id: Tenant ID for multi-tenancy isolation
 
     Returns:
         Created Job instance with id
     """
     db_job = Job(
+        tenant_id=tenant_id,
         title=job_data.title,
         description=job_data.description,
         location=job_data.location,
@@ -37,39 +42,51 @@ def create(db: Session, job_data: JobCreateRequest) -> Job:
     return db_job
 
 
-def get_by_id(db: Session, job_id: int) -> Optional[Job]:
+def get_by_id(db: Session, job_id: int, tenant_id: Optional[UUID] = None) -> Optional[Job]:
     """
-    Retrieve a job by its ID.
+    Retrieve a job by its ID (tenant-scoped when tenant_id provided).
 
     Args:
         db: Database session
         job_id: Job ID to retrieve
+        tenant_id: Optional tenant ID for multi-tenancy isolation
 
     Returns:
         Job instance if found, None otherwise
     """
-    return db.query(Job).filter(Job.id == job_id).first()
+    query = db.query(Job).filter(Job.id == job_id)
+
+    if tenant_id:
+        query = query.filter(Job.tenant_id == tenant_id)
+
+    return query.first()
 
 
 def get_multi(
     db: Session,
     skip: int = 0,
     limit: int = 100,
-    status: Optional[JobStatus] = None
+    status: Optional[JobStatus] = None,
+    tenant_id: Optional[UUID] = None
 ) -> List[Job]:
     """
-    Retrieve multiple jobs with pagination and optional filtering.
+    Retrieve multiple jobs with pagination and optional filtering (tenant-scoped).
 
     Args:
         db: Database session
         skip: Number of records to skip (offset)
         limit: Maximum number of records to return
         status: Optional status filter
+        tenant_id: Optional tenant ID for multi-tenancy isolation
 
     Returns:
         List of Job instances
     """
     query = db.query(Job)
+
+    # CRITICAL: Apply tenant filter first to enforce row-level security
+    if tenant_id:
+        query = query.filter(Job.tenant_id == tenant_id)
 
     # Apply status filter if provided
     if status:
@@ -143,19 +160,20 @@ def update_config(
     return job
 
 
-def update(db: Session, job_id: int, job_data: JobUpdateRequest) -> Optional[Job]:
+def update(db: Session, job_id: int, job_data: JobUpdateRequest, tenant_id: Optional[UUID] = None) -> Optional[Job]:
     """
-    Update a job's basic information (title, description, location, etc).
+    Update a job's basic information (title, description, location, etc) - tenant-scoped.
 
     Args:
         db: Database session
         job_id: Job ID to update
         job_data: Updated job data
+        tenant_id: Optional tenant ID for multi-tenancy isolation
 
     Returns:
         Updated Job instance if found, None otherwise
     """
-    job = get_by_id(db, job_id)
+    job = get_by_id(db, job_id, tenant_id=tenant_id)
     if not job:
         return None
 
@@ -175,18 +193,19 @@ def update(db: Session, job_id: int, job_data: JobUpdateRequest) -> Optional[Job
     return job
 
 
-def delete(db: Session, job_id: int) -> bool:
+def delete(db: Session, job_id: int, tenant_id: Optional[UUID] = None) -> bool:
     """
-    Delete a job by ID.
+    Delete a job by ID (tenant-scoped).
 
     Args:
         db: Database session
         job_id: Job ID to delete
+        tenant_id: Optional tenant ID for multi-tenancy isolation
 
     Returns:
         True if deleted, False if not found
     """
-    job = get_by_id(db, job_id)
+    job = get_by_id(db, job_id, tenant_id=tenant_id)
     if not job:
         return False
 

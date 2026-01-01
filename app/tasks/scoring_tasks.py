@@ -276,8 +276,9 @@ IMPORTANT: Do NOT include a "match_score" field. Python will calculate that.
             db.delete(existing_eval)
             db.commit()
 
-        # Store evaluation with Python-calculated score
+        # Store evaluation with Python-calculated score (with tenant_id for multi-tenancy)
         evaluation = Evaluation(
+            tenant_id=candidate.tenant_id,  # CRITICAL: Multi-tenancy isolation
             candidate_id=candidate.id,
             match_score=final_match_score,  # Python-calculated weighted score
             category_scores=ai_result["category_scores"],  # AI's grades + reasoning
