@@ -6,6 +6,7 @@ Handles subscription creation, upgrades, downgrades, and billing portal access.
 
 import logging
 import stripe
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -191,8 +192,9 @@ async def create_subscription(
         subscription.plan = tier_config['plan']
         subscription.status = SubscriptionStatus.ACTIVE
         subscription.monthly_candidate_limit = tier_config['limit']
-        subscription.current_period_start = stripe_subscription.current_period_start
-        subscription.current_period_end = stripe_subscription.current_period_end
+        # Convert Unix timestamps to datetime objects
+        subscription.current_period_start = datetime.fromtimestamp(stripe_subscription.current_period_start)
+        subscription.current_period_end = datetime.fromtimestamp(stripe_subscription.current_period_end)
 
         db.commit()
         db.refresh(subscription)
