@@ -39,32 +39,44 @@
 
         <div x-data="pricingPage()" class="min-h-screen">
             <!-- Header -->
-            <header class="bg-white/80 backdrop-blur-sm border-b border-slate-200 sticky top-0 z-50">
-                <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-                    <div class="flex items-center gap-2">
-                        <img src="/images/Logo.png" alt="Starscreen Logo" class="w-8 h-8">
-                        <h1 class="text-2xl font-bold text-brand-600">Starscreen</h1>
-                    </div>
-                    <div class="flex items-center gap-4">
-                        <template x-if="isAuthenticated">
-                            <a href="/" class="text-slate-600 hover:text-brand-600 transition">
-                                Go to Dashboard
-                            </a>
-                        </template>
-                        <template x-if="!isAuthenticated">
-                            <div class="flex items-center gap-3">
-                                <a href="/static/login.html" class="text-slate-600 hover:text-brand-600 transition">
-                                    Sign In
-                                </a>
-                                <a href="/static/register.html"
-                                    class="bg-brand-600 text-white px-4 py-2 rounded-lg hover:bg-brand-700 transition">
-                                    Get Started
-                                </a>
-                            </div>
-                        </template>
+            <nav class="bg-white border-b border-slate-200 sticky top-0 z-50">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="flex justify-between h-16">
+                        <a href="/" class="flex items-center gap-1 hover:opacity-80 transition cursor-pointer">
+                            <img src="/images/Logo.png" alt="Starscreen Logo" class="w-10 h-10">
+                            <span class="font-bold text-xl tracking-tight text-slate-800">Starscreen</span>
+                        </a>
+                        <div class="flex items-center gap-3">
+                            <template x-if="isAuthenticated">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-sm text-slate-500 bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
+                                        v1.0 • Connected
+                                    </span>
+                                    <a href="/static/pricing.html"
+                                       class="text-sm text-slate-600 hover:text-brand-600 font-medium px-3 py-2 rounded-lg hover:bg-slate-100 transition">
+                                        Subscription
+                                    </a>
+                                    <button onclick="Auth.logout()"
+                                            class="text-sm text-slate-600 hover:text-slate-900 font-medium px-3 py-2 rounded-lg hover:bg-slate-100 transition">
+                                        Logout
+                                    </button>
+                                </div>
+                            </template>
+                            <template x-if="!isAuthenticated">
+                                <div class="flex items-center gap-3">
+                                    <a href="/static/login.html" class="text-sm text-slate-600 hover:text-brand-600 font-medium px-3 py-2 rounded-lg hover:bg-slate-100 transition">
+                                        Sign In
+                                    </a>
+                                    <a href="/static/register.html"
+                                       class="text-sm bg-brand-600 text-white px-4 py-2 rounded-lg hover:bg-brand-700 transition font-medium">
+                                        Get Started
+                                    </a>
+                                </div>
+                            </template>
+                        </div>
                     </div>
                 </div>
-            </header>
+            </nav>
 
             <!-- Hero Section -->
             <div class="max-w-7xl mx-auto px-6 py-16 text-center">
@@ -295,71 +307,6 @@
                         </button>
                     </div>
                 </div>
-
-                <!-- Enterprise -->
-                <div class="mt-12 bg-white rounded-2xl shadow-xl border-2 border-brand-200 p-12 text-center">
-                    <h3 class="text-3xl font-bold text-slate-900 mb-4">Enterprise</h3>
-                    <p class="text-xl text-slate-600 mb-6">
-                        Custom pricing for large organizations with unlimited needs
-                    </p>
-                    <div class="flex items-center justify-center gap-8 mb-8 flex-wrap">
-                        <div class="flex items-center gap-2">
-                            <svg class="w-6 h-6 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                            </svg>
-                            <span class="text-slate-700">Unlimited candidates</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <svg class="w-6 h-6 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                            </svg>
-                            <span class="text-slate-700">SSO & SAML</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <svg class="w-6 h-6 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                            </svg>
-                            <span class="text-slate-700">Custom integrations</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <svg class="w-6 h-6 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                            </svg>
-                            <span class="text-slate-700">24/7 phone support</span>
-                        </div>
-                    </div>
-                    <button @click="contactSales()"
-                        class="bg-brand-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-brand-700 transition">
-                        Contact Sales
-                    </button>
-                </div>
-            </div>
-
-            <!-- FAQ Section -->
-            <div class="max-w-4xl mx-auto px-6 pb-24">
-                <h2 class="text-3xl font-bold text-slate-900 text-center mb-12">Frequently Asked Questions</h2>
-
-                <div class="space-y-4">
-                    <div class="bg-white rounded-lg shadow-md p-6">
-                        <h3 class="text-lg font-semibold text-slate-900 mb-2">Can I change plans later?</h3>
-                        <p class="text-slate-600">Yes! You can upgrade or downgrade your plan at any time. Changes take effect immediately and we'll prorate the difference.</p>
-                    </div>
-
-                    <div class="bg-white rounded-lg shadow-md p-6">
-                        <h3 class="text-lg font-semibold text-slate-900 mb-2">What happens if I exceed my limit?</h3>
-                        <p class="text-slate-600">We'll notify you when you're approaching your limit. On Enterprise, overage is billed at $0.50 per additional candidate. On other plans, you'll need to upgrade.</p>
-                    </div>
-
-                    <div class="bg-white rounded-lg shadow-md p-6">
-                        <h3 class="text-lg font-semibold text-slate-900 mb-2">Is there a free trial?</h3>
-                        <p class="text-slate-600">All paid plans include a 14-day free trial. No credit card required for the Free plan.</p>
-                    </div>
-
-                    <div class="bg-white rounded-lg shadow-md p-6">
-                        <h3 class="text-lg font-semibold text-slate-900 mb-2">How does AI scoring work?</h3>
-                        <p class="text-slate-600">We use GPT-4o to analyze resumes against your job description, scoring candidates on skills match, experience, and cultural fit.</p>
-                    </div>
-                </div>
             </div>
         </div>
 
@@ -385,11 +332,6 @@
                             });
                             window.location.href = `/static/checkout.html?${params.toString()}`;
                         }
-                    },
-
-                    contactSales() {
-                        // For now, redirect to email
-                        window.location.href = 'mailto:sales@starscreen.com?subject=Enterprise%20Plan%20Inquiry';
                     }
                 }
             }
