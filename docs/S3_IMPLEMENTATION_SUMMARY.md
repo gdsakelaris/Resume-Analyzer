@@ -1,204 +1,142 @@
-# S3 Storage Implementation Summary
+# AWS S3 Implementation - Quick Reference
 
-## ✅ Implementation Complete
-
-AWS S3 file storage has been successfully integrated into Starscreen. The system now supports **horizontal scaling** by decoupling file storage from API/worker containers.
+**Status**: Fully implemented and deployed to production
 
 ---
 
-## What Changed
+## Overview
 
-### New Files Created
-1. **[app/core/storage.py](../app/core/storage.py)** - Storage abstraction layer
-   - `LocalStorage` class: Local filesystem backend
-   - `S3Storage` class: AWS S3 backend
-   - `get_storage()` factory: Returns appropriate backend based on `USE_S3` setting
-
-2. **[docs/s3-migration-guide.md](s3-migration-guide.md)** - Complete S3 setup guide
-   - AWS bucket creation instructions
-   - IAM user/role configuration
-   - Cost estimates ($0.02-$1.50/month for typical usage)
-   - Troubleshooting guide
-
-### Files Modified
-1. **[app/core/config.py](../app/core/config.py)**
-   - Added: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, `S3_BUCKET_NAME`, `USE_S3`
-
-2. **[app/api/endpoints/candidates.py](../app/api/endpoints/candidates.py)**
-   - `upload_resume()`: Now uses `storage.upload_file()`
-   - `bulk_upload_resumes()`: Now uses `storage.upload_file()`
-   - `delete_candidate()`: Now uses `storage.delete_file()`
-   - `get_candidate_file()`: Streams files from S3 using `StreamingResponse` (no temp files)
-
-3. **[app/tasks/resume_tasks.py](../app/tasks/resume_tasks.py)**
-   - `parse_resume_task()`: Downloads from S3 to temp file, processes, then cleans up
-
-4. **[requirements.txt](../requirements.txt)**
-   - Added: `boto3==1.34.34`
-
-5. **[.env](.env)**
-   - Added S3 configuration variables (defaulted to `USE_S3=false` for backward compatibility)
-
-6. **[static/index.html](../static/index.html)**
-   - `downloadFile()`: Uses authenticated fetch with blob download for S3 files
-
-7. **[static/login.html](../static/login.html)**
-   - Added password visibility toggle matching register screen
+Resume files are stored in AWS S3 bucket `starscreen-resumes-prod` with IAM role-based authentication (no hardcoded credentials).
 
 ---
 
-## How It Works
+## Key Files
 
-### Storage Abstraction Pattern
+### [app/core/storage.py](../app/core/storage.py)
+Storage abstraction layer with S3 and local filesystem support.
+
+**Key Methods**:
+- `upload_file(file_obj, original_filename)` → Returns S3 key or local path
+- `download_file(file_path)` → Returns BytesIO object
+- `delete_file(file_path)` → Deletes from S3 or local
+- `file_exists(file_path)` → Checks if file exists
+
+**Implementation**:
 ```python
-from app.core.storage import storage
+# Auto-detects storage backend from settings.USE_S3
+storage = S3Storage() if settings.USE_S3 else LocalStorage()
 
-# Upload file (works with both S3 and local)
-file_path = storage.upload_file(file.file, filename)
-# Returns: "s3://bucket/resumes/uuid_file.pdf" (S3)
-#      or: "uploads/uuid_file.pdf" (local)
-
-# Download file
-file_data = storage.download_file(file_path)  # BytesIO object
-
-# Delete file
-storage.delete_file(file_path)
-
-# Check existence
-if storage.file_exists(file_path):
-    ...
+# Usage in candidates.py:
+file_path = storage.upload_file(file.file, file.filename)
 ```
 
-### Toggle Between S3 and Local
+### [app/api/endpoints/candidates.py](../app/api/endpoints/candidates.py)
+- **Line 19**: Import storage abstraction
+- **Line 119**: Upload file to storage (S3 or local)
+- **Line 520-544**: Download file from S3 (streaming response)
+- **Line 646**: Delete file from storage
+
+### Environment Variables
 ```bash
-# .env file
-USE_S3=false  # Local storage (development)
-USE_S3=true   # S3 storage (production)
-```
-
----
-
-## Backward Compatibility
-
-✅ **100% Backward Compatible**
-
-- Existing code continues to work with `USE_S3=false`
-- No database schema changes required
-- `candidates.file_path` column supports both formats:
-  - Local: `uploads/abc123.pdf`
-  - S3: `s3://bucket/resumes/abc123_file.pdf`
-
----
-
-## Current AWS Setup Status
-
-### ✅ Fully Deployed to Production!
-
-**Infrastructure (Completed):**
-1. **IAM Role**: `StarscreenEC2Role` with `AmazonS3FullAccess` policy attached
-2. **IAM Instance Profile**: Created and attached to EC2 instance
-3. **EC2 Instance**: Ubuntu 24.04, t3.medium with IAM role (IP: 44.223.41.116)
-4. **SSH Access**: Configured and working
-5. **S3 Bucket**: `starscreen-resumes-prod` with AES-256 encryption and private access
-6. **S3 Access**: Verified from EC2 (upload/download/delete working)
-
-**Application Deployment (Completed):**
-7. **Code on GitHub**: Repository pushed and accessible
-8. **Code on EC2**: Cloned to `~/Resume-Analyzer`
-9. **Environment**: Production `.env` configured with `USE_S3=true`
-10. **Docker**: All containers running (API, Worker, DB, Redis)
-11. **Database**: Migrations applied successfully
-12. **Frontend**: Working at http://44.223.41.116:8000/
-13. **API**: Accessible at http://44.223.41.116:8000/docs
-14. **S3 Downloads**: Fixed with authenticated streaming (no temp files)
-15. **UI Improvements**: Password visibility toggle on login/register screens
-
-**Next Steps**: Application ready for production use! See [Production Hardening](#production-hardening) for security improvements.
-
----
-
-## Next Steps (Enable S3)
-
-### 1. Create S3 Bucket (From Your EC2 Instance)
-
-SSH into your EC2:
-```bash
-ssh starscreen-ec2
-```
-
-Then run:
-```bash
-# Create S3 bucket
-aws s3 mb s3://starscreen-resumes-prod --region us-east-1
-
-# Block public access (keep resumes private)
-aws s3api put-public-access-block \
-  --bucket starscreen-resumes-prod \
-  --public-access-block-configuration \
-  "BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true"
-
-# Enable encryption
-aws s3api put-bucket-encryption \
-  --bucket starscreen-resumes-prod \
-  --server-side-encryption-configuration \
-  '{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"}}]}'
-
-# Verify bucket created
-aws s3 ls s3://starscreen-resumes-prod/
-```
-
-### 2. Update .env on EC2
-
-Since you're using IAM role (no access keys needed):
-```bash
+# .env (both local and EC2)
 USE_S3=true
-
-# Leave these EMPTY - EC2 uses IAM role automatically
-AWS_ACCESS_KEY_ID=
-AWS_SECRET_ACCESS_KEY=
-
 AWS_REGION=us-east-1
 S3_BUCKET_NAME=starscreen-resumes-prod
-```
-
-### 4. Rebuild Containers
-```bash
-docker-compose down
-docker-compose build  # Installs boto3
-docker-compose up -d
-```
-
-### 5. Test Upload
-```bash
-# Upload a resume
-curl -X POST http://localhost:8000/api/v1/jobs/1/candidates \
-  -H "Authorization: Bearer YOUR_TOKEN" \
-  -F "file=@resume.pdf"
-
-# Verify in S3
-aws s3 ls s3://starscreen-resumes-prod/resumes/
+AWS_ACCESS_KEY_ID=          # Empty (using IAM role on EC2)
+AWS_SECRET_ACCESS_KEY=      # Empty (using IAM role on EC2)
 ```
 
 ---
 
-## Architecture Impact
+## S3 Bucket Configuration
 
-### Before S3 (Single Server Only)
-```
-┌─────────────────────────────────────────┐
-│  Docker Container                       │
-│  ┌──────────┐  ┌─────────┐             │
-│  │ API      │  │ Worker  │             │
-│  └────┬─────┘  └────┬────┘             │
-│       │             │                   │
-│       └─────┬───────┘                   │
-│             ▼                           │
-│       uploads/ (local disk)             │
-└─────────────────────────────────────────┘
-```
-❌ Can't add more API servers (can't access same uploads/ directory)
+**Bucket Name**: `starscreen-resumes-prod`
+**Region**: `us-east-1`
+**Access**: Private (IAM role only)
 
-### After S3 (Horizontal Scaling)
+**IAM Role**: Attached to EC2 instance with S3 read/write permissions
+
+**File Naming**: UUIDs to prevent collisions (e.g., `abc123-resume.pdf`)
+
+---
+
+## Storage Flow
+
+### Upload
+```
+User uploads resume
+→ FastAPI receives file
+→ storage.upload_file(file_obj, "resume.pdf")
+→ S3: boto3.upload_fileobj(file_obj, bucket, "uuid-resume.pdf")
+→ Returns S3 key: "uuid-resume.pdf"
+→ Saved to database: candidate.file_path = "uuid-resume.pdf"
+```
+
+### Download
+```
+User requests resume file
+→ API checks: storage.file_exists(candidate.file_path)
+→ S3: download_file(candidate.file_path) → BytesIO
+→ StreamingResponse(BytesIO, media_type=content_type)
+→ User downloads file
+```
+
+### Delete
+```
+User deletes candidate
+→ storage.delete_file(candidate.file_path)
+→ S3: boto3.delete_object(bucket, file_path)
+→ Database record deleted
+```
+
+---
+
+## Production Setup
+
+### EC2 Instance
+- **Domain**: https://starscreen.net
+- **IAM Role**: `StarscreenEC2Role` with S3 permissions
+- **Bucket**: `starscreen-resumes-prod` (AES-256 encrypted, private)
+
+### Deployment
+```bash
+# EC2
+USE_S3=true
+AWS_REGION=us-east-1
+S3_BUCKET_NAME=starscreen-resumes-prod
+AWS_ACCESS_KEY_ID=          # Empty - uses IAM role
+AWS_SECRET_ACCESS_KEY=      # Empty - uses IAM role
+```
+
+---
+
+## Testing S3 Integration
+
+```bash
+# EC2
+docker-compose logs api | grep -i s3
+
+# Expected logs:
+# "Saved resume to storage: uuid-resume.pdf"
+# "Downloaded file from S3: uuid-resume.pdf"
+# "Deleted resume file from storage: uuid-resume.pdf"
+```
+
+---
+
+## Local Development
+
+For local testing without S3:
+```bash
+# .env (local)
+USE_S3=false  # Files stored in ./uploads/ directory
+```
+
+---
+
+## Architecture Benefits
+
+### Horizontal Scaling
 ```
 ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
 │ API Server 1 │  │ API Server 2 │  │ API Server N │
@@ -210,88 +148,14 @@ aws s3 ls s3://starscreen-resumes-prod/resumes/
                │   AWS S3 Bucket │
                │   (Shared)      │
                └─────────────────┘
-                         ▲
-       ┌─────────────────┼─────────────────┐
-       │                 │                 │
-┌──────┴────────┐  ┌─────┴────────┐  ┌────┴─────────┐
-│  Worker 1     │  │  Worker 2    │  │  Worker N    │
-└───────────────┘  └──────────────┘  └──────────────┘
 ```
-✅ Can add unlimited API servers and workers
+
+**Benefits**:
+- Multiple API servers can access same files
+- Stateless containers (easy to scale)
+- 99.999999999% data durability
+- Minimal cost (<$0.20/month for 10K candidates)
 
 ---
 
-## Cost Analysis
-
-### S3 Costs (Negligible)
-- **Storage**: $0.023/GB/month → **$0.12/month** for 10K resumes (5GB)
-- **Uploads**: $0.005 per 1K requests → **$0.05/month** for 10K uploads
-- **Downloads**: $0.0004 per 1K requests → **$0.004/month** for 10K downloads
-- **Total**: ~**$0.17/month** for 10K candidates
-
-### OpenAI Costs (Still Dominant)
-- **Scoring**: $0.006 per candidate → **$60/month** for 10K candidates
-
-**S3 adds <0.3% to total infrastructure costs**
-
----
-
-## Security Features
-
-✅ **Encryption at Rest**: All uploads use AES-256 server-side encryption
-✅ **Private Bucket**: Public access blocked by default
-✅ **IAM Least Privilege**: Only grants necessary S3 permissions
-✅ **Secure URLs**: S3 URIs stored in database (not public URLs)
-✅ **Tenant Isolation**: Multi-tenancy enforced at application layer
-
----
-
-## Next Steps
-
-### Immediate (Before Production)
-1. ✅ S3 code integration (DONE)
-2. ⏳ Create production S3 bucket
-3. ⏳ Create IAM user with restricted permissions
-4. ⏳ Update production `.env` with `USE_S3=true`
-5. ⏳ Test upload/download/delete flows
-
-### Phase 3 Optimizations
-1. **Pre-signed URLs**: Browser uploads directly to S3 (bypass API server)
-2. **CloudFront CDN**: Cache resume downloads globally
-3. **S3 Transfer Acceleration**: Faster uploads from Asia/Europe
-4. **Lifecycle Policies**: Auto-delete old resumes after 90 days (GDPR compliance)
-
----
-
-## Troubleshooting
-
-See **[s3-migration-guide.md](s3-migration-guide.md#troubleshooting)** for detailed troubleshooting steps.
-
-**Common Issues**:
-- **Access Denied**: Check IAM permissions and bucket policy
-- **NoSuchBucket**: Verify bucket name and region in .env
-- **InvalidAccessKeyId**: Regenerate access keys in IAM console
-- **Failed to download**: Check worker logs for S3 errors
-
----
-
-## Summary
-
-🎉 **S3 storage is now production-ready!**
-
-**What you get**:
-- ✅ Horizontal scaling (multiple API servers + workers)
-- ✅ 99.999999999% data durability (no lost files)
-- ✅ Stateless containers (easy Kubernetes deployment)
-- ✅ Backward compatible (can toggle S3 on/off)
-- ✅ Minimal cost increase (<$0.20/month for 10K candidates)
-
-**What's next**:
-- Phase 2: Complete remaining tasks (email verification, rate limiting, tests)
-- Phase 3: Kubernetes deployment with auto-scaling
-- Phase 4: Performance optimizations (pre-signed URLs, CloudFront CDN)
-
----
-
-*Implemented: 2025-12-31*
-*Status: ✅ Ready for Production*
+**Last Updated**: 2026-01-01
