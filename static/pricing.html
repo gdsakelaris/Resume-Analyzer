@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-50">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Pricing - Starscreen</title>
+
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+            rel="stylesheet">
+
+        <script src="https://cdn.tailwindcss.com"></script>
+
+        <script>
+            tailwind.config = {
+                theme: {
+                    extend: {
+                        fontFamily: { sans: ['Inter', 'sans-serif'] },
+                        colors: {
+                            brand: {
+                                50: '#f5f3ff',
+                                100: '#ede9fe',
+                                500: '#8b5cf6',
+                                600: '#7c3aed',
+                                700: '#6d28d9',
+                                900: '#4c1d95',
+                            }
+                        }
+                    }
+                }
+            }
+        </script>
+
+        <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+        <script src="/static/auth.js"></script>
+    </head>
+    <body class="h-full antialiased bg-gradient-to-br from-brand-50 via-slate-50 to-violet-50">
+
+        <div x-data="pricingPage()" class="min-h-screen">
+            <!-- Header -->
+            <header class="bg-white/80 backdrop-blur-sm border-b border-slate-200 sticky top-0 z-50">
+                <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <img src="/images/Logo.png" alt="Starscreen Logo" class="w-8 h-8">
+                        <h1 class="text-2xl font-bold text-brand-600">Starscreen</h1>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <template x-if="isAuthenticated">
+                            <a href="/" class="text-slate-600 hover:text-brand-600 transition">
+                                Go to Dashboard
+                            </a>
+                        </template>
+                        <template x-if="!isAuthenticated">
+                            <div class="flex items-center gap-3">
+                                <a href="/static/login.html" class="text-slate-600 hover:text-brand-600 transition">
+                                    Sign In
+                                </a>
+                                <a href="/static/register.html"
+                                    class="bg-brand-600 text-white px-4 py-2 rounded-lg hover:bg-brand-700 transition">
+                                    Get Started
+                                </a>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Hero Section -->
+            <div class="max-w-7xl mx-auto px-6 py-16 text-center">
+                <h2 class="text-5xl font-bold text-slate-900 mb-4">
+                    Simple, Transparent Pricing
+                </h2>
+                <p class="text-xl text-slate-600 mb-8">
+                    Start free, upgrade as you grow. No hidden fees.
+                </p>
+
+                <!-- Billing Toggle -->
+                <div class="flex items-center justify-center gap-3 mb-12">
+                    <span class="text-slate-700 font-medium"
+                        :class="{ 'text-brand-600': billingPeriod === 'monthly' }">
+                        Monthly
+                    </span>
+                    <button @click="billingPeriod = billingPeriod === 'monthly' ? 'annual' : 'monthly'"
+                        class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
+                        :class="billingPeriod === 'annual' ? 'bg-brand-600' : 'bg-slate-300'">
+                        <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
+                            :class="billingPeriod === 'annual' ? 'translate-x-6' : 'translate-x-1'"></span>
+                    </button>
+                    <span class="text-slate-700 font-medium flex items-center gap-2"
+                        :class="{ 'text-brand-600': billingPeriod === 'annual' }">
+                        Annual
+                        <span class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold">
+                            Save 20%
+                        </span>
+                    </span>
+                </div>
+            </div>
+
+            <!-- Pricing Cards -->
+            <div class="max-w-7xl mx-auto px-6 pb-24">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <!-- Free Plan -->
+                    <div class="bg-white rounded-2xl shadow-lg border-2 border-slate-200 p-8 hover:shadow-xl transition">
+                        <div class="text-center mb-6">
+                            <h3 class="text-2xl font-bold text-slate-900 mb-2">Free</h3>
+                            <div class="mb-4">
+                                <span class="text-5xl font-bold text-slate-900">$0</span>
+                                <span class="text-slate-600">/month</span>
+                            </div>
+                            <p class="text-slate-600 text-sm">Perfect for trying out Starscreen</p>
+                        </div>
+
+                        <ul class="space-y-3 mb-8">
+                            <li class="flex items-start gap-2">
+                                <svg class="w-5 h-5 text-green-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                                <span class="text-slate-700">10 candidates/month</span>
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <svg class="w-5 h-5 text-green-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                                <span class="text-slate-700">AI resume scoring</span>
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <svg class="w-5 h-5 text-green-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                                <span class="text-slate-700">Basic analytics</span>
+                            </li>
+                        </ul>
+
+                        <button @click="selectPlan('free')"
+                            class="w-full bg-slate-100 text-slate-700 font-semibold py-3 rounded-lg hover:bg-slate-200 transition">
+                            Get Started Free
+                        </button>
+                    </div>
+
+                    <!-- Starter Plan -->
+                    <div class="bg-white rounded-2xl shadow-lg border-2 border-slate-200 p-8 hover:shadow-xl transition">
+                        <div class="text-center mb-6">
+                            <h3 class="text-2xl font-bold text-slate-900 mb-2">Starter</h3>
+                            <div class="mb-4">
+                                <span class="text-5xl font-bold text-slate-900"
+                                    x-text="billingPeriod === 'monthly' ? '$49' : '$39'"></span>
+                                <span class="text-slate-600">/month</span>
+                            </div>
+                            <p class="text-slate-600 text-sm">For small teams and recruiters</p>
+                        </div>
+
+                        <ul class="space-y-3 mb-8">
+                            <li class="flex items-start gap-2">
+                                <svg class="w-5 h-5 text-green-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                                <span class="text-slate-700 font-semibold">100 candidates/month</span>
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <svg class="w-5 h-5 text-green-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                                <span class="text-slate-700">AI resume scoring</span>
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <svg class="w-5 h-5 text-green-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                                <span class="text-slate-700">Bulk upload (ZIP)</span>
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <svg class="w-5 h-5 text-green-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                                <span class="text-slate-700">Advanced analytics</span>
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <svg class="w-5 h-5 text-green-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                                <span class="text-slate-700">Email support</span>
+                            </li>
+                        </ul>
+
+                        <button @click="selectPlan('starter', billingPeriod)"
+                            class="w-full bg-brand-600 text-white font-semibold py-3 rounded-lg hover:bg-brand-700 transition">
+                            Start Free Trial
+                        </button>
+                    </div>
+
+                    <!-- Small Business Plan (Popular) -->
+                    <div class="bg-gradient-to-br from-brand-600 to-brand-700 rounded-2xl shadow-2xl border-2 border-brand-500 p-8 hover:shadow-3xl transition relative">
+                        <div class="absolute -top-4 left-1/2 -translate-x-1/2 bg-yellow-400 text-slate-900 px-4 py-1 rounded-full text-sm font-bold">
+                            POPULAR
+                        </div>
+
+                        <div class="text-center mb-6">
+                            <h3 class="text-2xl font-bold text-white mb-2">Small Business</h3>
+                            <div class="mb-4">
+                                <span class="text-5xl font-bold text-white"
+                                    x-text="billingPeriod === 'monthly' ? '$149' : '$119'"></span>
+                                <span class="text-brand-100">/month</span>
+                            </div>
+                            <p class="text-brand-100 text-sm">For growing recruitment teams</p>
+                        </div>
+
+                        <ul class="space-y-3 mb-8">
+                            <li class="flex items-start gap-2">
+                                <svg class="w-5 h-5 text-yellow-300 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                                <span class="text-white font-semibold">250 candidates/month</span>
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <svg class="w-5 h-5 text-yellow-300 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                                <span class="text-white">Everything in Starter</span>
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <svg class="w-5 h-5 text-yellow-300 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                                <span class="text-white">Priority processing</span>
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <svg class="w-5 h-5 text-yellow-300 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                                <span class="text-white">Custom branding</span>
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <svg class="w-5 h-5 text-yellow-300 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                                <span class="text-white">Priority support</span>
+                            </li>
+                        </ul>
+
+                        <button @click="selectPlan('small_business', billingPeriod)"
+                            class="w-full bg-white text-brand-600 font-semibold py-3 rounded-lg hover:bg-brand-50 transition">
+                            Start Free Trial
+                        </button>
+                    </div>
+
+                    <!-- Professional Plan -->
+                    <div class="bg-white rounded-2xl shadow-lg border-2 border-slate-200 p-8 hover:shadow-xl transition">
+                        <div class="text-center mb-6">
+                            <h3 class="text-2xl font-bold text-slate-900 mb-2">Professional</h3>
+                            <div class="mb-4">
+                                <span class="text-5xl font-bold text-slate-900"
+                                    x-text="billingPeriod === 'monthly' ? '$399' : '$319'"></span>
+                                <span class="text-slate-600">/month</span>
+                            </div>
+                            <p class="text-slate-600 text-sm">For agencies and enterprises</p>
+                        </div>
+
+                        <ul class="space-y-3 mb-8">
+                            <li class="flex items-start gap-2">
+                                <svg class="w-5 h-5 text-green-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                                <span class="text-slate-700 font-semibold">1,000 candidates/month</span>
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <svg class="w-5 h-5 text-green-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                                <span class="text-slate-700">Everything in Small Business</span>
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <svg class="w-5 h-5 text-green-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                                <span class="text-slate-700">Multi-user access</span>
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <svg class="w-5 h-5 text-green-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                                <span class="text-slate-700">API access</span>
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <svg class="w-5 h-5 text-green-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                                <span class="text-slate-700">Dedicated support</span>
+                            </li>
+                        </ul>
+
+                        <button @click="selectPlan('professional', billingPeriod)"
+                            class="w-full bg-brand-600 text-white font-semibold py-3 rounded-lg hover:bg-brand-700 transition">
+                            Start Free Trial
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Enterprise -->
+                <div class="mt-12 bg-white rounded-2xl shadow-xl border-2 border-brand-200 p-12 text-center">
+                    <h3 class="text-3xl font-bold text-slate-900 mb-4">Enterprise</h3>
+                    <p class="text-xl text-slate-600 mb-6">
+                        Custom pricing for large organizations with unlimited needs
+                    </p>
+                    <div class="flex items-center justify-center gap-8 mb-8 flex-wrap">
+                        <div class="flex items-center gap-2">
+                            <svg class="w-6 h-6 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            <span class="text-slate-700">Unlimited candidates</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <svg class="w-6 h-6 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            <span class="text-slate-700">SSO & SAML</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <svg class="w-6 h-6 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            <span class="text-slate-700">Custom integrations</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <svg class="w-6 h-6 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            <span class="text-slate-700">24/7 phone support</span>
+                        </div>
+                    </div>
+                    <button @click="contactSales()"
+                        class="bg-brand-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-brand-700 transition">
+                        Contact Sales
+                    </button>
+                </div>
+            </div>
+
+            <!-- FAQ Section -->
+            <div class="max-w-4xl mx-auto px-6 pb-24">
+                <h2 class="text-3xl font-bold text-slate-900 text-center mb-12">Frequently Asked Questions</h2>
+
+                <div class="space-y-4">
+                    <div class="bg-white rounded-lg shadow-md p-6">
+                        <h3 class="text-lg font-semibold text-slate-900 mb-2">Can I change plans later?</h3>
+                        <p class="text-slate-600">Yes! You can upgrade or downgrade your plan at any time. Changes take effect immediately and we'll prorate the difference.</p>
+                    </div>
+
+                    <div class="bg-white rounded-lg shadow-md p-6">
+                        <h3 class="text-lg font-semibold text-slate-900 mb-2">What happens if I exceed my limit?</h3>
+                        <p class="text-slate-600">We'll notify you when you're approaching your limit. On Enterprise, overage is billed at $0.50 per additional candidate. On other plans, you'll need to upgrade.</p>
+                    </div>
+
+                    <div class="bg-white rounded-lg shadow-md p-6">
+                        <h3 class="text-lg font-semibold text-slate-900 mb-2">Is there a free trial?</h3>
+                        <p class="text-slate-600">All paid plans include a 14-day free trial. No credit card required for the Free plan.</p>
+                    </div>
+
+                    <div class="bg-white rounded-lg shadow-md p-6">
+                        <h3 class="text-lg font-semibold text-slate-900 mb-2">How does AI scoring work?</h3>
+                        <p class="text-slate-600">We use GPT-4o to analyze resumes against your job description, scoring candidates on skills match, experience, and cultural fit.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            function pricingPage() {
+                return {
+                    billingPeriod: 'monthly',
+                    isAuthenticated: false,
+
+                    init() {
+                        this.isAuthenticated = Auth.isAuthenticated();
+                    },
+
+                    selectPlan(tier, period = 'monthly') {
+                        if (tier === 'free') {
+                            // Redirect to registration
+                            window.location.href = '/static/register.html';
+                        } else {
+                            // Redirect to checkout with selected plan
+                            const params = new URLSearchParams({
+                                plan: tier,
+                                billing: period
+                            });
+                            window.location.href = `/static/checkout.html?${params.toString()}`;
+                        }
+                    },
+
+                    contactSales() {
+                        // For now, redirect to email
+                        window.location.href = 'mailto:sales@starscreen.com?subject=Enterprise%20Plan%20Inquiry';
+                    }
+                }
+            }
+        </script>
+
+        <style>
+            [x-cloak] {
+                display: none !important;
+            }
+        </style>
+    </body>
+</html>

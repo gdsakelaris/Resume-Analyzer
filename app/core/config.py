@@ -49,6 +49,7 @@ class Settings(BaseSettings):
     STRIPE_PRICE_ID_SMALL_BUSINESS: str = ""    # Stripe Price ID for Small Business plan
     STRIPE_PRICE_ID_PROFESSIONAL: str = ""      # Stripe Price ID for Professional plan
     STRIPE_PRICE_ID_ENTERPRISE: str = ""        # Stripe Price ID for Enterprise plan
+    FRONTEND_URL: str = "http://localhost:8000"  # Frontend URL for redirects
 
     # AWS S3 Settings
     AWS_ACCESS_KEY_ID: str = ""                 # AWS access key (optional if using IAM roles)

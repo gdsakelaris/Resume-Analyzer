@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-50">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Checkout - Starscreen</title>
+
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+            rel="stylesheet">
+
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script src="https://js.stripe.com/v3/"></script>
+
+        <script>
+            tailwind.config = {
+                theme: {
+                    extend: {
+                        fontFamily: { sans: ['Inter', 'sans-serif'] },
+                        colors: {
+                            brand: {
+                                50: '#f5f3ff',
+                                100: '#ede9fe',
+                                500: '#8b5cf6',
+                                600: '#7c3aed',
+                                700: '#6d28d9',
+                                900: '#4c1d95',
+                            }
+                        }
+                    }
+                }
+            }
+        </script>
+
+        <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+        <script src="/static/auth.js"></script>
+    </head>
+    <body class="h-full antialiased bg-gradient-to-br from-brand-50 via-slate-50 to-violet-50">
+
+        <div x-data="checkoutPage()" class="min-h-screen py-12">
+            <!-- Header -->
+            <div class="max-w-4xl mx-auto px-6 mb-8">
+                <div class="flex items-center gap-2 mb-6">
+                    <img src="/images/Logo.png" alt="Starscreen Logo" class="w-8 h-8">
+                    <h1 class="text-2xl font-bold text-brand-600">Starscreen</h1>
+                </div>
+                <h2 class="text-3xl font-bold text-slate-900">Complete Your Subscription</h2>
+                <p class="text-slate-600 mt-2">Start your 14-day free trial. Cancel anytime.</p>
+            </div>
+
+            <!-- Main Content -->
+            <div class="max-w-4xl mx-auto px-6">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <!-- Checkout Form -->
+                    <div class="lg:col-span-2">
+                        <div class="bg-white rounded-2xl shadow-xl border border-slate-200 p-8">
+                            <!-- Error Message -->
+                            <div x-show="errorMessage" x-cloak class="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                                <p class="text-sm text-red-800" x-text="errorMessage"></p>
+                            </div>
+
+                            <!-- Loading State -->
+                            <div x-show="loading" x-cloak class="text-center py-12">
+                                <svg class="animate-spin h-12 w-12 mx-auto text-brand-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                <p class="mt-4 text-slate-600">Processing your subscription...</p>
+                            </div>
+
+                            <!-- Form -->
+                            <form x-show="!loading" @submit.prevent="handleCheckout">
+                                <!-- Account Information -->
+                                <div class="mb-8">
+                                    <h3 class="text-lg font-semibold text-slate-900 mb-4">Account Information</h3>
+
+                                    <template x-if="!isAuthenticated">
+                                        <div class="space-y-4">
+                                            <div>
+                                                <label for="email" class="block text-sm font-medium text-slate-700 mb-2">
+                                                    Email Address
+                                                </label>
+                                                <input type="email" id="email" x-model="email" required
+                                                    class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500">
+                                            </div>
+
+                                            <div>
+                                                <label for="password" class="block text-sm font-medium text-slate-700 mb-2">
+                                                    Password
+                                                </label>
+                                                <input type="password" id="password" x-model="password" required
+                                                    class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500">
+                                            </div>
+
+                                            <p class="text-sm text-slate-600">
+                                                Already have an account?
+                                                <a href="/static/login.html" class="text-brand-600 hover:text-brand-700 font-medium">
+                                                    Sign in
+                                                </a>
+                                            </p>
+                                        </div>
+                                    </template>
+
+                                    <template x-if="isAuthenticated">
+                                        <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                                            <p class="text-sm text-green-800">
+                                                Signed in as <strong x-text="userEmail"></strong>
+                                            </p>
+                                        </div>
+                                    </template>
+                                </div>
+
+                                <!-- Payment Information -->
+                                <div class="mb-8">
+                                    <h3 class="text-lg font-semibold text-slate-900 mb-4">Payment Information</h3>
+
+                                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                                        <p class="text-sm text-blue-800">
+                                            <strong>Free Trial:</strong> You won't be charged today. Your card will be charged after 14 days.
+                                        </p>
+                                    </div>
+
+                                    <!-- Stripe Card Element -->
+                                    <div id="card-element" class="p-4 border border-slate-300 rounded-lg bg-white"></div>
+                                    <div id="card-errors" class="mt-2 text-sm text-red-600"></div>
+                                </div>
+
+                                <!-- Terms -->
+                                <div class="mb-6">
+                                    <label class="flex items-start gap-3">
+                                        <input type="checkbox" x-model="acceptTerms" required
+                                            class="mt-1 w-4 h-4 text-brand-600 border-slate-300 rounded focus:ring-brand-500">
+                                        <span class="text-sm text-slate-700">
+                                            I agree to the
+                                            <a href="#" class="text-brand-600 hover:text-brand-700">Terms of Service</a>
+                                            and
+                                            <a href="#" class="text-brand-600 hover:text-brand-700">Privacy Policy</a>
+                                        </span>
+                                    </label>
+                                </div>
+
+                                <!-- Submit Button -->
+                                <button type="submit" :disabled="!acceptTerms || loading"
+                                    class="w-full bg-brand-600 text-white font-semibold py-4 rounded-lg hover:bg-brand-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                                    Start Free Trial
+                                </button>
+
+                                <p class="text-center text-sm text-slate-600 mt-4">
+                                    Secured by Stripe
+                                </p>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Order Summary -->
+                    <div class="lg:col-span-1">
+                        <div class="bg-white rounded-2xl shadow-xl border border-slate-200 p-6 sticky top-6">
+                            <h3 class="text-lg font-semibold text-slate-900 mb-4">Order Summary</h3>
+
+                            <div class="space-y-3 mb-6">
+                                <div class="flex justify-between">
+                                    <span class="text-slate-700" x-text="planName"></span>
+                                    <span class="font-semibold text-slate-900" x-text="planPrice"></span>
+                                </div>
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-slate-600">Billing Period</span>
+                                    <span class="text-slate-700 capitalize" x-text="billingPeriod"></span>
+                                </div>
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-slate-600">Candidate Limit</span>
+                                    <span class="text-slate-700" x-text="candidateLimit"></span>
+                                </div>
+                            </div>
+
+                            <div class="border-t border-slate-200 pt-4 mb-6">
+                                <div class="flex justify-between mb-2">
+                                    <span class="text-slate-700">Free Trial (14 days)</span>
+                                    <span class="text-green-600 font-semibold">$0</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="font-semibold text-slate-900">First Charge</span>
+                                    <span class="font-semibold text-slate-900" x-text="firstChargeDate"></span>
+                                </div>
+                            </div>
+
+                            <div class="bg-brand-50 rounded-lg p-4">
+                                <h4 class="font-semibold text-brand-900 mb-2">What's Included:</h4>
+                                <ul class="space-y-2 text-sm text-brand-800">
+                                    <template x-for="feature in planFeatures" :key="feature">
+                                        <li class="flex items-start gap-2">
+                                            <svg class="w-4 h-4 text-brand-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                            </svg>
+                                            <span x-text="feature"></span>
+                                        </li>
+                                    </template>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            function checkoutPage() {
+                return {
+                    // Form state
+                    email: '',
+                    password: '',
+                    acceptTerms: false,
+                    loading: false,
+                    errorMessage: '',
+
+                    // User state
+                    isAuthenticated: false,
+                    userEmail: '',
+
+                    // Plan details
+                    planTier: '',
+                    billingPeriod: 'monthly',
+                    planName: '',
+                    planPrice: '',
+                    candidateLimit: '',
+                    firstChargeDate: '',
+                    planFeatures: [],
+
+                    // Stripe
+                    stripe: null,
+                    cardElement: null,
+
+                    init() {
+                        // Check authentication
+                        this.isAuthenticated = Auth.isAuthenticated();
+                        if (this.isAuthenticated) {
+                            const user = Auth.getUser();
+                            this.userEmail = user?.email || '';
+                        }
+
+                        // Parse URL parameters
+                        const params = new URLSearchParams(window.location.search);
+                        this.planTier = params.get('plan') || 'starter';
+                        this.billingPeriod = params.get('billing') || 'monthly';
+
+                        // Set plan details
+                        this.setPlanDetails();
+
+                        // Calculate first charge date (14 days from now)
+                        const date = new Date();
+                        date.setDate(date.getDate() + 14);
+                        this.firstChargeDate = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+                        // Initialize Stripe
+                        this.initStripe();
+                    },
+
+                    setPlanDetails() {
+                        const plans = {
+                            starter: {
+                                name: 'Starter Plan',
+                                price_monthly: '$49',
+                                price_annual: '$39',
+                                limit: '100 candidates/month',
+                                features: [
+                                    'AI resume scoring',
+                                    'Bulk upload (ZIP)',
+                                    'Advanced analytics',
+                                    'Email support'
+                                ]
+                            },
+                            small_business: {
+                                name: 'Small Business Plan',
+                                price_monthly: '$149',
+                                price_annual: '$119',
+                                limit: '250 candidates/month',
+                                features: [
+                                    'Everything in Starter',
+                                    'Priority processing',
+                                    'Custom branding',
+                                    'Priority support'
+                                ]
+                            },
+                            professional: {
+                                name: 'Professional Plan',
+                                price_monthly: '$399',
+                                price_annual: '$319',
+                                limit: '1,000 candidates/month',
+                                features: [
+                                    'Everything in Small Business',
+                                    'Multi-user access',
+                                    'API access',
+                                    'Dedicated support'
+                                ]
+                            }
+                        };
+
+                        const plan = plans[this.planTier];
+                        this.planName = plan.name;
+                        this.planPrice = this.billingPeriod === 'monthly' ? plan.price_monthly : plan.price_annual;
+                        this.candidateLimit = plan.limit;
+                        this.planFeatures = plan.features;
+                    },
+
+                    initStripe() {
+                        // Initialize Stripe (you'll need to add your publishable key)
+                        this.stripe = Stripe('pk_test_YOUR_STRIPE_PUBLISHABLE_KEY');
+                        const elements = this.stripe.elements();
+
+                        // Create card element
+                        this.cardElement = elements.create('card', {
+                            style: {
+                                base: {
+                                    fontSize: '16px',
+                                    color: '#334155',
+                                    '::placeholder': {
+                                        color: '#94a3b8',
+                                    },
+                                },
+                            },
+                        });
+
+                        this.cardElement.mount('#card-element');
+
+                        // Handle real-time validation errors
+                        this.cardElement.on('change', (event) => {
+                            const displayError = document.getElementById('card-errors');
+                            if (event.error) {
+                                displayError.textContent = event.error.message;
+                            } else {
+                                displayError.textContent = '';
+                            }
+                        });
+                    },
+
+                    async handleCheckout() {
+                        this.errorMessage = '';
+                        this.loading = true;
+
+                        try {
+                            // Step 1: Create account if not authenticated
+                            if (!this.isAuthenticated) {
+                                await this.registerUser();
+                            }
+
+                            // Step 2: Create payment method
+                            const { paymentMethod, error } = await this.stripe.createPaymentMethod({
+                                type: 'card',
+                                card: this.cardElement,
+                                billing_details: {
+                                    email: this.isAuthenticated ? this.userEmail : this.email,
+                                },
+                            });
+
+                            if (error) {
+                                throw new Error(error.message);
+                            }
+
+                            // Step 3: Create subscription
+                            await this.createSubscription(paymentMethod.id);
+
+                            // Success! Redirect to dashboard
+                            window.location.href = '/?subscription=success';
+
+                        } catch (error) {
+                            this.errorMessage = error.message || 'An error occurred during checkout';
+                            console.error('Checkout error:', error);
+                        } finally {
+                            this.loading = false;
+                        }
+                    },
+
+                    async registerUser() {
+                        const response = await fetch('/api/v1/auth/register', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                email: this.email,
+                                password: this.password
+                            })
+                        });
+
+                        const data = await response.json();
+
+                        if (!response.ok) {
+                            throw new Error(data.detail || 'Registration failed');
+                        }
+
+                        // Store tokens
+                        Auth.login(data.access_token, data.refresh_token, data.user);
+                        this.isAuthenticated = true;
+                        this.userEmail = this.email;
+                    },
+
+                    async createSubscription(paymentMethodId) {
+                        const response = await Auth.fetch('/api/v1/subscriptions/create', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                tier: this.planTier.toUpperCase(),
+                                billing_period: this.billingPeriod,
+                                payment_method_id: paymentMethodId
+                            })
+                        });
+
+                        const data = await response.json();
+
+                        if (!response.ok) {
+                            throw new Error(data.detail || 'Subscription creation failed');
+                        }
+
+                        return data;
+                    }
+                }
+            }
+        </script>
+
+        <style>
+            [x-cloak] {
+                display: none !important;
+            }
+
+            #card-element {
+                min-height: 40px;
+            }
+        </style>
+    </body>
+</html>
