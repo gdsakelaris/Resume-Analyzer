@@ -67,11 +67,11 @@ async def create_subscription(
         if not subscription:
             raise HTTPException(status_code=404, detail="No subscription found for user")
 
-        # Check if already has active subscription
-        if subscription.status == SubscriptionStatus.ACTIVE:
+        # Check if already has active PAID subscription (allow upgrading from FREE)
+        if subscription.status == SubscriptionStatus.ACTIVE and subscription.plan != SubscriptionPlan.FREE:
             raise HTTPException(
                 status_code=400,
-                detail="User already has an active subscription"
+                detail="User already has an active paid subscription. Please cancel it first or use the upgrade endpoint."
             )
 
         # Map tier to Stripe price ID and limits
