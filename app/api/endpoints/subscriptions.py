@@ -127,19 +127,25 @@ async def create_subscription(
         # Create or retrieve Stripe customer
         if not subscription.stripe_customer_id:
             logger.info(f"Creating new Stripe customer for {current_user.email}")
-            customer = stripe.Customer.create(
-                email=current_user.email,
-                payment_method=request.payment_method_id,
-                invoice_settings={
-                    'default_payment_method': request.payment_method_id,
-                },
-                metadata={
-                    'user_id': str(current_user.id),
-                    'tenant_id': str(current_user.tenant_id)
-                }
-            )
-            subscription.stripe_customer_id = customer.id
-            logger.info(f"Created Stripe customer: {customer.id}")
+            try:
+                customer = stripe.Customer.create(
+                    email=current_user.email,
+                    payment_method=request.payment_method_id,
+                    invoice_settings={
+                        'default_payment_method': request.payment_method_id,
+                    },
+                    metadata={
+                        'user_id': str(current_user.id),
+                        'tenant_id': str(current_user.tenant_id)
+                    }
+                )
+                logger.info(f"Stripe customer created, attempting to save customer ID: {customer.id}")
+                subscription.stripe_customer_id = customer.id
+                logger.info(f"Successfully saved customer ID to subscription")
+            except Exception as e:
+                logger.error(f"Error in customer creation flow: {type(e).__name__}: {str(e)}")
+                logger.error(f"Stripe API key status: {stripe.api_key[:20] if stripe.api_key else 'NONE'}...")
+                raise
         else:
             # Attach payment method to existing customer
             stripe.PaymentMethod.attach(
