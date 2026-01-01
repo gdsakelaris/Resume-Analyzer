@@ -164,8 +164,6 @@
                             // Store tokens using auth utility
                             Auth.login(data.access_token, data.refresh_token);
 
-                            this.successMessage = 'Login successful! Redirecting...';
-
                             // Redirect to main app after 1 second
                             setTimeout(() => {
                                 window.location.href = '/';

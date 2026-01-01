@@ -101,8 +101,8 @@ class Subscription(Base):
     stripe_subscription_id = Column(String, nullable=True, unique=True, index=True)
 
     # Subscription details
-    plan = Column(Enum(SubscriptionPlan), default=SubscriptionPlan.FREE, nullable=False)
-    status = Column(Enum(SubscriptionStatus), default=SubscriptionStatus.TRIALING, nullable=False, index=True)
+    plan = Column(Enum(SubscriptionPlan, values_callable=lambda x: [e.value for e in x]), default=SubscriptionPlan.FREE, nullable=False)
+    status = Column(Enum(SubscriptionStatus, values_callable=lambda x: [e.value for e in x]), default=SubscriptionStatus.TRIALING, nullable=False, index=True)
 
     # Usage limits (enforced by application logic)
     monthly_candidate_limit = Column(Integer, default=5, nullable=False)  # Free tier: 5 candidates/month

@@ -948,28 +948,215 @@ evaluations.tenant_id
 
 ## Recent Bug Fixes (2025-12-31)
 
-### 1. Bcrypt 72-Byte Password Limit Fix
-**Issue**: Server crashed with `ValueError: password cannot be longer than 72 bytes` during registration.
+### 1. Bcrypt Version Incompatibility Fix (CRITICAL)
+**Issue**: Server crashed with `ValueError: password cannot be longer than 72 bytes, truncate manually if necessary` during both registration and login attempts.
 
-**Root Cause**: Bcrypt has a hard 72-byte limit. During bcrypt initialization, it tried to verify test passwords that exceeded this limit.
+**Root Cause**: passlib 1.7.4 is incompatible with bcrypt 5.0.0+. The newer bcrypt changed its internal API, and passlib's CryptContext initialization attempted to hash test passwords that exceeded bcrypt's 72-byte limit, causing initialization to fail entirely.
 
-**Fix**: Modified [app/core/security.py](app/core/security.py):
-- `get_password_hash()`: Encodes password to UTF-8 and truncates to 72 bytes before hashing
-- `verify_password()`: Same truncation for consistency during verification
-- Added documentation comments explaining the limitation
+**Failed Attempts**:
+1. Manual byte truncation in [app/core/security.py](app/core/security.py) - Error persisted
+2. String truncation with UTF-8 decode - Error persisted
+3. CryptContext configuration (`bcrypt__truncate_error=False`) - Configuration option doesn't exist
+4. Removing truncation logic entirely - Error persisted
 
-**Impact**: Registration now works reliably for all password lengths. Passwords >72 bytes are automatically truncated.
+**Successful Fix**: Downgraded bcrypt to compatible version in [requirements.txt](requirements.txt#L10):
+```python
+# Authentication & Security
+python-jose[cryptography]==3.3.0  # JWT token generation/validation
+passlib[bcrypt]==1.7.4            # Password hashing
+bcrypt==3.2.0                     # Compatible version with passlib 1.7.4
+```
 
-### 2. Pydantic Settings Validation Error Fix
-**Issue**: API crashed on startup with `ValidationError: Extra inputs are not permitted` for DATABASE_URL, CELERY_BROKER_URL, etc.
+**Resolution Steps**:
+1. Updated requirements.txt with `bcrypt==3.2.0`
+2. Ran `docker-compose down`
+3. Ran `docker-compose up --build -d` (full rebuild with new bcrypt version)
+4. Ran `docker-compose exec api alembic upgrade head` to create database tables
 
-**Root Cause**: Pydantic v2 defaults to `extra = "forbid"`. The .env file had duplicate/legacy fields that were constructed as properties in Settings class.
+**Impact**: Registration and login now work reliably. The issue was at the library initialization level, not in application code.
 
-**Fix**: Modified [app/core/config.py](app/core/config.py#L69):
-- Added `extra = "ignore"` to Config class
-- Added missing Stripe plan fields: `STRIPE_PRICE_ID_SMALL_BUSINESS`, `STRIPE_PRICE_ID_ENTERPRISE`
+**Lesson Learned**: Always check dependency compatibility matrix, especially for cryptographic libraries. Version pinning is critical for authentication systems.
 
-**Impact**: API now starts successfully even with extra fields in .env. More flexible configuration management.
+---
+
+### 2. SQLAlchemy Enum Value Mismatch Fix (CRITICAL)
+**Issue**: Registration succeeded until database insertion, then failed with:
+```
+sqlalchemy.exc.DataError: (psycopg2.errors.InvalidTextRepresentation)
+invalid input value for enum subscriptionplan: "FREE"
+```
+
+**Root Cause**: PostgreSQL enum values are lowercase (`'free'`, `'starter'`, etc.), but SQLAlchemy's default `Enum()` column definition uses the Python enum's **NAME** (uppercase `FREE`, `STARTER`) instead of the enum's **VALUE** (lowercase).
+
+**Example**:
+```python
+class SubscriptionPlan(str, enum.Enum):
+    FREE = "free"        # NAME: FREE, VALUE: "free"
+    STARTER = "starter"  # NAME: STARTER, VALUE: "starter"
+```
+
+**Fix**: Modified [app/models/subscription.py](app/models/subscription.py#L104-L105) to use `values_callable`:
+```python
+# Before (BROKEN):
+plan = Column(Enum(SubscriptionPlan), default=SubscriptionPlan.FREE, nullable=False)
+status = Column(Enum(SubscriptionStatus), default=SubscriptionStatus.TRIALING, nullable=False)
+
+# After (FIXED):
+plan = Column(
+    Enum(SubscriptionPlan, values_callable=lambda x: [e.value for e in x]),
+    default=SubscriptionPlan.FREE,
+    nullable=False
+)
+status = Column(
+    Enum(SubscriptionStatus, values_callable=lambda x: [e.value for e in x]),
+    default=SubscriptionStatus.TRIALING,
+    nullable=False,
+    index=True
+)
+```
+
+**Impact**: Subscription records now insert correctly with lowercase enum values matching PostgreSQL database schema.
+
+**Lesson Learned**: SQLAlchemy's `Enum()` column defaults to using Python enum names, not values. Always use `values_callable=lambda x: [e.value for e in x]` when your database enum values differ from Python enum names.
+
+---
+
+### 3. Missing Database Tables Fix
+**Issue**: After rebuilding Docker containers, API requests failed with:
+```
+sqlalchemy.exc.ProgrammingError: (psycopg2.errors.UndefinedTable)
+relation "users" does not exist
+```
+
+**Root Cause**: Running `docker-compose up --build -d` creates a fresh database container with no schema. Alembic migrations must be run manually after rebuilding.
+
+**Fix**: Ran database migrations:
+```bash
+docker-compose exec api alembic upgrade head
+```
+
+**Impact**: Database schema now includes all tables (users, subscriptions, jobs, candidates, evaluations) and enum types.
+
+**Lesson Learned**: After `docker-compose down` or `docker-compose down -v`, always run Alembic migrations before using the API.
+
+---
+
+### 4. Pydantic Settings Validation Error Fix
+**Issue**: API crashed on startup with `ValidationError: 5 validation errors for Settings - Extra inputs are not permitted` for DATABASE_URL, CELERY_BROKER_URL, and other computed fields.
+
+**Root Cause**: Pydantic v2 defaults to `extra = "forbid"`, which rejects .env fields that aren't explicitly defined in the Settings class. The .env file contained legacy fields that were actually computed as properties (e.g., DATABASE_URL is constructed from POSTGRES_USER, POSTGRES_PASSWORD, etc.).
+
+**Fix**: Modified [app/core/config.py](app/core/config.py) to:
+1. Add `extra = "ignore"` to Config class:
+```python
+class Config:
+    env_file = ".env"
+    case_sensitive = True
+    extra = "ignore"  # Ignore extra fields in .env that aren't in Settings
+```
+
+2. Added missing Stripe price ID fields:
+```python
+# Stripe Settings
+STRIPE_PRICE_ID_STARTER: str = ""
+STRIPE_PRICE_ID_SMALL_BUSINESS: str = ""
+STRIPE_PRICE_ID_PROFESSIONAL: str = ""
+STRIPE_PRICE_ID_ENTERPRISE: str = ""
+```
+
+**Impact**: API now starts successfully even with extra fields in .env. More flexible configuration management that allows for computed properties and legacy fields.
+
+**Lesson Learned**: When using Pydantic v2 Settings, use `extra = "ignore"` if you have computed properties or want flexibility in .env files.
+
+---
+
+### 5. Subscription Pricing Updates
+**Change**: Updated pricing tiers to round numbers for better marketing:
+- Small Business: $99/mo → **$100/mo**
+- Enterprise base: $499/mo → **$500/mo**
+
+**Files Modified**:
+- [app/models/subscription.py](app/models/subscription.py#L38-L40) - Updated pricing in enum docstring
+- [app/models/subscription.py](app/models/subscription.py#L61-L70) - Updated `base_price_usd` property
+- [docs/project-summary.md](docs/project-summary.md#L56-L62) - Updated documentation
+
+**Database Migration**: Created [alembic/versions/7c0d41691735_add_small_business_plan.py](alembic/versions/7c0d41691735_add_small_business_plan.py) to add `small_business` enum value to PostgreSQL.
+
+**Impact**: Pricing now matches business requirements. No breaking changes to existing subscriptions.
+
+---
+
+## Debugging Guide for Future Issues
+
+### Registration/Login Errors
+
+**Symptom**: "Server error. Please try again" with no details
+
+**Debug Steps**:
+1. Check API logs: `docker-compose logs api --tail=50`
+2. Look for Python stack traces (ValueError, ValidationError, DataError, etc.)
+3. Common causes:
+   - Bcrypt version incompatibility (see Fix #1)
+   - Enum value mismatch (see Fix #2)
+   - Missing database tables (see Fix #3)
+   - Pydantic validation errors (see Fix #4)
+
+**Key Log Locations**:
+- API logs: `docker-compose logs api -f`
+- Worker logs: `docker-compose logs worker -f`
+- Database logs: `docker-compose logs db -f`
+
+### Dependency Version Issues
+
+**When adding/updating dependencies**:
+1. Check compatibility matrix for cryptographic libraries (bcrypt, passlib, python-jose)
+2. Pin exact versions in requirements.txt
+3. Rebuild Docker containers: `docker-compose down && docker-compose up --build -d`
+4. Test authentication flow immediately after rebuild
+
+**Current Pinned Versions** (app/models/subscription.py):
+- bcrypt==3.2.0 (compatible with passlib 1.7.4)
+- passlib[bcrypt]==1.7.4
+- python-jose[cryptography]==3.3.0
+
+### Database Migration Issues
+
+**Symptom**: `relation "table_name" does not exist`
+
+**Fix**: Run migrations
+```bash
+docker-compose exec api alembic upgrade head
+```
+
+**Symptom**: `invalid input value for enum`
+
+**Debug**:
+1. Check PostgreSQL enum values: `docker-compose exec db psql -U user -d talent_db`
+2. Run: `\dT+ subscriptionplan` to see enum values
+3. Verify SQLAlchemy models use `values_callable` for enums (see Fix #2)
+
+### SQLAlchemy Enum Best Practices
+
+**Always use this pattern** for enums:
+```python
+# Python enum definition
+class MyEnum(str, enum.Enum):
+    VALUE_ONE = "value_one"  # Lowercase matches database
+    VALUE_TWO = "value_two"
+
+# SQLAlchemy column definition
+my_column = Column(
+    Enum(MyEnum, values_callable=lambda x: [e.value for e in x]),
+    default=MyEnum.VALUE_ONE,
+    nullable=False
+)
+```
+
+**Why**:
+- PostgreSQL stores enum values as lowercase strings
+- SQLAlchemy's default Enum() uses Python enum **names** (uppercase)
+- `values_callable` forces SQLAlchemy to use enum **values** (lowercase)
+- This prevents `invalid input value for enum` errors
 
 ## Quick Reference for LLMs
 
