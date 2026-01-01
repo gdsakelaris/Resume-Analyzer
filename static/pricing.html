@@ -156,12 +156,17 @@
                             </li>
                         </ul>
 
-                        <button @click="selectPlan('free')"
-                            :disabled="currentPlan === 'FREE'"
-                            :class="currentPlan === 'FREE' ? 'bg-slate-400 cursor-not-allowed' : 'bg-slate-100 hover:bg-slate-200'"
-                            class="w-full text-slate-700 font-semibold py-3 rounded-lg transition">
-                            <span x-text="currentPlan === 'FREE' ? 'Current Plan' : 'Get Started'"></span>
-                        </button>
+                        <template x-if="currentPlan === 'FREE'">
+                            <div class="bg-slate-400 text-white font-bold py-3 rounded-lg text-center">
+                                Current Plan
+                            </div>
+                        </template>
+                        <template x-if="currentPlan !== 'FREE'">
+                            <button @click="selectPlan('free')"
+                                class="w-full bg-slate-100 text-slate-700 font-semibold py-3 rounded-lg hover:bg-slate-200 transition">
+                                Get Started
+                            </button>
+                        </template>
                     </div>
 
                     <!-- Recruiter Plan (Popular) -->
@@ -205,20 +210,19 @@
                                 </svg>
                                 <span class="text-white">Advanced analytics</span>
                             </li>
-                            <li class="flex items-start gap-2">
-                                <svg class="w-5 h-5 text-yellow-300 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                </svg>
-                                <span class="text-white">Email support</span>
-                            </li>
                         </ul>
 
-                        <button @click="selectPlan('starter', billingPeriod)"
-                            :disabled="currentPlan === 'STARTER'"
-                            :class="currentPlan === 'STARTER' ? 'bg-slate-400 cursor-not-allowed text-white' : 'bg-white hover:bg-brand-50 text-brand-700'"
-                            class="w-full font-semibold py-3 rounded-lg transition">
-                            <span x-text="currentPlan === 'STARTER' ? 'Current Plan' : 'Select Plan'"></span>
-                        </button>
+                        <template x-if="currentPlan === 'STARTER'">
+                            <div class="bg-yellow-400 text-slate-900 font-bold py-3 rounded-lg text-center">
+                                Current Plan
+                            </div>
+                        </template>
+                        <template x-if="currentPlan !== 'STARTER'">
+                            <button @click="selectPlan('starter', billingPeriod)"
+                                class="w-full bg-white text-brand-700 font-semibold py-3 rounded-lg hover:bg-brand-50 transition">
+                                Choose Plan
+                            </button>
+                        </template>
                     </div>
 
                     <!-- Small Business Plan -->
@@ -238,7 +242,7 @@
                                 <svg class="w-5 h-5 text-green-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                                 </svg>
-                                <span class="text-slate-700 font-semibold">250 candidates/month</span>
+                                <span class="text-slate-700 font-semibold">745 candidates/month</span>
                             </li>
                             <li class="flex items-start gap-2">
                                 <svg class="w-5 h-5 text-green-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -250,28 +254,27 @@
                                 <svg class="w-5 h-5 text-green-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                                 </svg>
+                                <span class="text-slate-700">Multi-user access</span>
+                            </li>
+                            <li class="flex items-start gap-2">
+                                <svg class="w-5 h-5 text-green-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
                                 <span class="text-slate-700">Priority processing</span>
-                            </li>
-                            <li class="flex items-start gap-2">
-                                <svg class="w-5 h-5 text-green-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                </svg>
-                                <span class="text-slate-700">Custom branding</span>
-                            </li>
-                            <li class="flex items-start gap-2">
-                                <svg class="w-5 h-5 text-green-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                </svg>
-                                <span class="text-slate-700">Priority support</span>
                             </li>
                         </ul>
 
-                        <button @click="selectPlan('small_business', billingPeriod)"
-                            :disabled="currentPlan === 'SMALL_BUSINESS'"
-                            :class="currentPlan === 'SMALL_BUSINESS' ? 'bg-slate-400 cursor-not-allowed' : 'bg-brand-600 hover:bg-brand-700'"
-                            class="w-full text-white font-semibold py-3 rounded-lg transition">
-                            <span x-text="currentPlan === 'SMALL_BUSINESS' ? 'Current Plan' : 'Select Plan'"></span>
-                        </button>
+                        <template x-if="currentPlan === 'SMALL_BUSINESS'">
+                            <div class="bg-slate-400 text-white font-bold py-3 rounded-lg text-center">
+                                Current Plan
+                            </div>
+                        </template>
+                        <template x-if="currentPlan !== 'SMALL_BUSINESS'">
+                            <button @click="selectPlan('small_business', billingPeriod)"
+                                class="w-full bg-brand-600 text-white font-semibold py-3 rounded-lg hover:bg-brand-700 transition">
+                                Choose Plan
+                            </button>
+                        </template>
                     </div>
 
                     <!-- Enterprise Plan -->
@@ -291,7 +294,7 @@
                                 <svg class="w-5 h-5 text-green-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                                 </svg>
-                                <span class="text-slate-700 font-semibold">1,000 candidates/month</span>
+                                <span class="text-slate-700 font-semibold">1,995 candidates/month</span>
                             </li>
                             <li class="flex items-start gap-2">
                                 <svg class="w-5 h-5 text-green-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -303,28 +306,21 @@
                                 <svg class="w-5 h-5 text-green-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                                 </svg>
-                                <span class="text-slate-700">Multi-user access</span>
-                            </li>
-                            <li class="flex items-start gap-2">
-                                <svg class="w-5 h-5 text-green-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                </svg>
-                                <span class="text-slate-700">API access</span>
-                            </li>
-                            <li class="flex items-start gap-2">
-                                <svg class="w-5 h-5 text-green-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                </svg>
-                                <span class="text-slate-700">Dedicated support</span>
+                                <span class="text-slate-700">Advanced reporting</span>
                             </li>
                         </ul>
 
-                        <button @click="selectPlan('professional', billingPeriod)"
-                            :disabled="currentPlan === 'PROFESSIONAL'"
-                            :class="currentPlan === 'PROFESSIONAL' ? 'bg-slate-400 cursor-not-allowed' : 'bg-brand-600 hover:bg-brand-700'"
-                            class="w-full text-white font-semibold py-3 rounded-lg transition">
-                            <span x-text="currentPlan === 'PROFESSIONAL' ? 'Current Plan' : 'Select Plan'"></span>
-                        </button>
+                        <template x-if="currentPlan === 'PROFESSIONAL'">
+                            <div class="bg-slate-400 text-white font-bold py-3 rounded-lg text-center">
+                                Current Plan
+                            </div>
+                        </template>
+                        <template x-if="currentPlan !== 'PROFESSIONAL'">
+                            <button @click="selectPlan('professional', billingPeriod)"
+                                class="w-full bg-brand-600 text-white font-semibold py-3 rounded-lg hover:bg-brand-700 transition">
+                                Choose Plan
+                            </button>
+                        </template>
                     </div>
                 </div>
             </div>
