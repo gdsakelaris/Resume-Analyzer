@@ -109,15 +109,15 @@ def handle_subscription_created(db: Session, stripe_sub: dict):
     # Map Stripe price ID to plan and limits (same as subscriptions.py)
     price_id = stripe_sub["items"]["data"][0]["price"]["id"]
     tier_mapping = {
-        settings.STRIPE_PRICE_ID_STARTER: {
+        settings.STRIPE_PRICE_ID_RECRUITER_MONTHLY: {
             "plan": SubscriptionPlan.STARTER,
             "limit": 100
         },
-        settings.STRIPE_PRICE_ID_SMALL_BUSINESS: {
+        settings.STRIPE_PRICE_ID_SMALL_BUSINESS_MONTHLY: {
             "plan": SubscriptionPlan.SMALL_BUSINESS,
             "limit": 1000
         },
-        settings.STRIPE_PRICE_ID_PROFESSIONAL: {
+        settings.STRIPE_PRICE_ID_ENTERPRISE_MONTHLY: {
             "plan": SubscriptionPlan.PROFESSIONAL,
             "limit": 999999  # Unlimited
         }
@@ -155,15 +155,15 @@ def handle_subscription_updated(db: Session, stripe_sub: dict):
     # Check for plan changes (use same tier mapping as subscription creation)
     price_id = stripe_sub["items"]["data"][0]["price"]["id"]
     tier_mapping = {
-        settings.STRIPE_PRICE_ID_STARTER: {
+        settings.STRIPE_PRICE_ID_RECRUITER_MONTHLY: {
             "plan": SubscriptionPlan.STARTER,
             "limit": 100
         },
-        settings.STRIPE_PRICE_ID_SMALL_BUSINESS: {
+        settings.STRIPE_PRICE_ID_SMALL_BUSINESS_MONTHLY: {
             "plan": SubscriptionPlan.SMALL_BUSINESS,
             "limit": 1000
         },
-        settings.STRIPE_PRICE_ID_PROFESSIONAL: {
+        settings.STRIPE_PRICE_ID_ENTERPRISE_MONTHLY: {
             "plan": SubscriptionPlan.PROFESSIONAL,
             "limit": 999999  # Unlimited
         }

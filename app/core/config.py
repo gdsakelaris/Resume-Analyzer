@@ -45,10 +45,26 @@ class Settings(BaseSettings):
     # Stripe Settings
     STRIPE_API_KEY: str = ""
     STRIPE_WEBHOOK_SECRET: str = ""
-    STRIPE_PRICE_ID_STARTER: str = ""           # Stripe Price ID for Starter plan
-    STRIPE_PRICE_ID_SMALL_BUSINESS: str = ""    # Stripe Price ID for Small Business plan
-    STRIPE_PRICE_ID_PROFESSIONAL: str = ""      # Stripe Price ID for Professional plan
-    STRIPE_PRICE_ID_ENTERPRISE: str = ""        # Stripe Price ID for Enterprise plan
+
+    # Stripe Price IDs - Monthly
+    STRIPE_PRICE_ID_RECRUITER_MONTHLY: str = ""
+    STRIPE_PRICE_ID_SMALL_BUSINESS_MONTHLY: str = ""
+    STRIPE_PRICE_ID_ENTERPRISE_MONTHLY: str = ""
+
+    # Stripe Price IDs - Yearly
+    STRIPE_PRICE_ID_RECRUITER_YEARLY: str = ""
+    STRIPE_PRICE_ID_SMALL_BUSINESS_YEARLY: str = ""
+    STRIPE_PRICE_ID_ENTERPRISE_YEARLY: str = ""
+
+    # Aliases for backwards compatibility
+    @property
+    def STRIPE_PRICE_ID_STARTER(self) -> str:
+        return self.STRIPE_PRICE_ID_RECRUITER_MONTHLY
+
+    @property
+    def STRIPE_PRICE_ID_PROFESSIONAL(self) -> str:
+        return self.STRIPE_PRICE_ID_ENTERPRISE_MONTHLY
+
     FRONTEND_URL: str = "http://localhost:8000"  # Frontend URL for redirects
 
     # AWS S3 Settings

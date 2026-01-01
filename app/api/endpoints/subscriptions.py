@@ -77,17 +77,17 @@ async def create_subscription(
         # Map tier to Stripe price ID and limits
         tier_mapping = {
             "STARTER": {
-                "price_id": settings.STRIPE_PRICE_ID_STARTER,
+                "price_id": settings.STRIPE_PRICE_ID_RECRUITER_MONTHLY,
                 "limit": 100,
                 "plan": SubscriptionPlan.STARTER
             },
             "SMALL_BUSINESS": {
-                "price_id": settings.STRIPE_PRICE_ID_SMALL_BUSINESS,
+                "price_id": settings.STRIPE_PRICE_ID_SMALL_BUSINESS_MONTHLY,
                 "limit": 1000,
                 "plan": SubscriptionPlan.SMALL_BUSINESS
             },
             "PROFESSIONAL": {
-                "price_id": settings.STRIPE_PRICE_ID_PROFESSIONAL,
+                "price_id": settings.STRIPE_PRICE_ID_ENTERPRISE_MONTHLY,
                 "limit": 999999,  # Unlimited (represented as very large number)
                 "plan": SubscriptionPlan.PROFESSIONAL
             }
@@ -284,9 +284,9 @@ async def upgrade_subscription(
 
     # Map tier to price ID
     tier_mapping = {
-        "STARTER": settings.STRIPE_PRICE_ID_STARTER,
-        "SMALL_BUSINESS": settings.STRIPE_PRICE_ID_SMALL_BUSINESS,
-        "PROFESSIONAL": settings.STRIPE_PRICE_ID_PROFESSIONAL
+        "STARTER": settings.STRIPE_PRICE_ID_RECRUITER_MONTHLY,
+        "SMALL_BUSINESS": settings.STRIPE_PRICE_ID_SMALL_BUSINESS_MONTHLY,
+        "PROFESSIONAL": settings.STRIPE_PRICE_ID_ENTERPRISE_MONTHLY
     }
 
     new_price_id = tier_mapping.get(new_tier.upper())
