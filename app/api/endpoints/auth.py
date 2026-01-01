@@ -90,7 +90,8 @@ def register(
     return TokenResponse(
         access_token=access_token,
         refresh_token=refresh_token,
-        token_type="bearer"
+        token_type="bearer",
+        user=UserResponse.model_validate(new_user)
     )
 
 
@@ -133,7 +134,8 @@ def login(
     return TokenResponse(
         access_token=access_token,
         refresh_token=refresh_token,
-        token_type="bearer"
+        token_type="bearer",
+        user=UserResponse.model_validate(user)
     )
 
 
