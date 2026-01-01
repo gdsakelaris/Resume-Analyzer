@@ -78,8 +78,10 @@ All migrations applied successfully:
 
 ### Frontend Features
 - User authentication (JWT tokens)
+- Password visibility toggle on login/register screens
 - Job creation and management
 - Resume upload with drag-and-drop
+- Resume download with S3 streaming support
 - Candidate scoring and ranking
 - Subscription tier management
 
@@ -94,6 +96,8 @@ All migrations applied successfully:
 5. **Database Migration** - All schema migrations applied
 6. **Frontend Fix** - Changed API URL from localhost to relative path
 7. **Production Verification** - All systems operational
+8. **UI Improvements** - Added password visibility toggle to login screen
+9. **Download Fix** - Fixed S3 resume downloads with authenticated streaming
 
 ---
 
@@ -114,6 +118,10 @@ All migrations applied successfully:
 ### 4. Frontend CORS Error (localhost URL)
 **Problem**: Frontend called `http://localhost:8000/api/v1/jobs/` instead of server IP
 **Solution**: Changed `API_BASE` in `static/index.html` from `http://localhost:8000/api/v1` to `/api/v1`
+
+### 5. Resume Download Authentication Error
+**Problem**: Resume downloads failed with "file wasn't available on site" error
+**Solution**: Changed frontend to use `Auth.fetch()` with Bearer token and download via blob URL instead of direct link
 
 ---
 

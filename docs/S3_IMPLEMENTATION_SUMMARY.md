@@ -28,7 +28,7 @@ AWS S3 file storage has been successfully integrated into Starscreen. The system
    - `upload_resume()`: Now uses `storage.upload_file()`
    - `bulk_upload_resumes()`: Now uses `storage.upload_file()`
    - `delete_candidate()`: Now uses `storage.delete_file()`
-   - `get_candidate_file()`: Downloads from S3 if `USE_S3=true`
+   - `get_candidate_file()`: Streams files from S3 using `StreamingResponse` (no temp files)
 
 3. **[app/tasks/resume_tasks.py](../app/tasks/resume_tasks.py)**
    - `parse_resume_task()`: Downloads from S3 to temp file, processes, then cleans up
@@ -38,6 +38,12 @@ AWS S3 file storage has been successfully integrated into Starscreen. The system
 
 5. **[.env](.env)**
    - Added S3 configuration variables (defaulted to `USE_S3=false` for backward compatibility)
+
+6. **[static/index.html](../static/index.html)**
+   - `downloadFile()`: Uses authenticated fetch with blob download for S3 files
+
+7. **[static/login.html](../static/login.html)**
+   - Added password visibility toggle matching register screen
 
 ---
 
@@ -104,6 +110,8 @@ USE_S3=true   # S3 storage (production)
 11. **Database**: Migrations applied successfully
 12. **Frontend**: Working at http://44.223.41.116:8000/
 13. **API**: Accessible at http://44.223.41.116:8000/docs
+14. **S3 Downloads**: Fixed with authenticated streaming (no temp files)
+15. **UI Improvements**: Password visibility toggle on login/register screens
 
 **Next Steps**: Application ready for production use! See [Production Hardening](#production-hardening) for security improvements.
 
