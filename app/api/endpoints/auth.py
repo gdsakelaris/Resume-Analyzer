@@ -21,6 +21,7 @@ from app.core.security import verify_password, get_password_hash, create_access_
 from app.core.deps import get_current_user
 from app.core.config import settings
 from app.core.verification import create_verification_code
+from app.core.celery_utils import queue_task_safely
 from app.models.user import User
 from app.models.subscription import Subscription, SubscriptionPlan, SubscriptionStatus
 from app.schemas.user import (
@@ -91,16 +92,17 @@ def register(
     logger.info(f"New user registered: {new_user.email} (tenant_id: {new_user.tenant_id})")
 
     # Generate and send verification code
-    try:
-        verification = create_verification_code(db, new_user.id)
-        send_verification_email_task.delay(
-            to_email=new_user.email,
-            verification_code=verification.code,
-            user_name=new_user.full_name
-        )
+    verification = create_verification_code(db, new_user.id)
+    success = queue_task_safely(
+        send_verification_email_task,
+        to_email=new_user.email,
+        verification_code=verification.code,
+        user_name=new_user.full_name
+    )
+    if success:
         logger.info(f"Verification email queued for {new_user.email}")
-    except Exception as e:
-        logger.error(f"Failed to queue verification email: {e}")
+    else:
+        logger.error(f"Failed to queue verification email for {new_user.email}")
         # Don't fail registration if email fails - user can request resend
 
     # Generate JWT tokens

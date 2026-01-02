@@ -12,6 +12,7 @@ from app.core.database import get_db
 from app.core.deps import get_current_user
 from app.core.verification import create_verification_code, verify_code, get_active_verification
 from app.core.rate_limiter import check_send_verification_limit, check_resend_verification_limit, check_verify_code_limit
+from app.core.celery_utils import queue_task_safely
 from app.models.user import User
 from app.schemas.verification import (
     VerifyCodeRequest,
@@ -56,11 +57,18 @@ def send_verification_code(
     verification = create_verification_code(db, current_user.id)
 
     # Queue async email task
-    send_verification_email_task.delay(
+    success = queue_task_safely(
+        send_verification_email_task,
         to_email=current_user.email,
         verification_code=verification.code,
         user_name=current_user.full_name
     )
+
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to send verification email. Please try again."
+        )
 
     logger.info(f"Verification code sent to user {current_user.email}")
 
@@ -103,11 +111,18 @@ def resend_verification_code(
     verification = create_verification_code(db, current_user.id)
 
     # Queue async email task
-    send_verification_email_task.delay(
+    success = queue_task_safely(
+        send_verification_email_task,
         to_email=current_user.email,
         verification_code=verification.code,
         user_name=current_user.full_name
     )
+
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to send verification email. Please try again."
+        )
 
     logger.info(f"Verification code resent to user {current_user.email}")
 
