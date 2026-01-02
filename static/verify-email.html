@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-50">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Verify Email - Starscreen</title>
+
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+            rel="stylesheet">
+
+        <script src="https://cdn.tailwindcss.com"></script>
+
+        <script>
+            tailwind.config = {
+                theme: {
+                    extend: {
+                        fontFamily: { sans: ['Inter', 'sans-serif'] },
+                        colors: {
+                            brand: {
+                                50: '#f5f3ff',
+                                100: '#ede9fe',
+                                500: '#8b5cf6',
+                                600: '#7c3aed',
+                                700: '#6d28d9',
+                                900: '#4c1d95',
+                            }
+                        }
+                    }
+                }
+            }
+        </script>
+
+        <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+        <script src="/static/auth.js"></script>
+    </head>
+    <body
+        class="h-full flex items-center justify-center antialiased bg-gradient-to-br from-brand-50 via-slate-50 to-violet-50">
+
+        <div class="w-full max-w-md px-6" x-data="verifyEmailForm()">
+            <!-- Logo and Header -->
+            <div class="text-center mb-8">
+                <div class="flex items-center justify-center gap-2 mb-2">
+                    <img src="/images/Logo.png" alt="Starscreen Logo" class="w-10 h-10">
+                    <h1 class="text-4xl font-bold text-slate-800">Starscreen</h1>
+                </div>
+                <p class="text-slate-600">Verify your email address</p>
+            </div>
+
+            <!-- Verification Card -->
+            <div class="bg-white rounded-2xl shadow-xl border border-slate-200 p-8">
+                <!-- Success State (Hidden until verified) -->
+                <div x-show="verified" x-cloak class="text-center">
+                    <!-- Success Icon -->
+                    <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-4">
+                        <svg class="h-10 w-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                    </div>
+                    <h2 class="text-2xl font-bold text-slate-800 mb-2">Email Verified!</h2>
+                    <p class="text-slate-600 mb-6">Your email has been successfully verified.</p>
+                    <p class="text-sm text-slate-500">Redirecting to dashboard...</p>
+                </div>
+
+                <!-- Verification Form (Hidden after verification) -->
+                <div x-show="!verified" x-cloak>
+                    <!-- Info Message -->
+                    <div class="mb-6 p-4 bg-brand-50 border border-brand-200 rounded-lg">
+                        <p class="text-sm text-brand-900">
+                            <strong>Check your email!</strong> We've sent a 6-digit verification code to <span x-text="userEmail" class="font-mono font-semibold"></span>
+                        </p>
+                    </div>
+
+                    <!-- Error Message -->
+                    <div x-show="errorMessage" x-cloak class="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                        <p class="text-sm text-red-800" x-text="errorMessage"></p>
+                    </div>
+
+                    <!-- Verification Form -->
+                    <form @submit.prevent="handleVerify">
+                        <div class="mb-6">
+                            <label class="block text-sm font-medium text-slate-700 mb-3 text-center">
+                                Enter 6-Digit Code
+                            </label>
+
+                            <!-- 6-Digit Code Input -->
+                            <div class="flex gap-2 justify-center mb-4">
+                                <template x-for="i in 6" :key="i">
+                                    <input
+                                        type="text"
+                                        maxlength="1"
+                                        :id="'code-' + i"
+                                        x-model="code[i-1]"
+                                        @input="handleInput($event, i)"
+                                        @keydown="handleKeyDown($event, i)"
+                                        @paste="handlePaste($event)"
+                                        class="w-12 h-14 text-center text-2xl font-bold border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition"
+                                        pattern="[0-9]"
+                                        inputmode="numeric"
+                                        required>
+                                </template>
+                            </div>
+
+                            <!-- Expiration Timer -->
+                            <div class="text-center mb-4">
+                                <p class="text-sm text-slate-600">
+                                    Code expires in: <span class="font-semibold text-brand-600" x-text="formatTime(timeRemaining)"></span>
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Verify Button -->
+                        <button type="submit" :disabled="loading || !isCodeComplete()"
+                            class="w-full bg-brand-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                            <span x-show="!loading">Verify Email</span>
+                            <span x-show="loading" class="flex items-center justify-center gap-2">
+                                <svg class="animate-spin h-5 w-5" viewBox="0 0 24 24" fill="none">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Verifying...
+                            </span>
+                        </button>
+                    </form>
+
+                    <!-- Resend Code -->
+                    <div class="mt-6 text-center">
+                        <p class="text-sm text-slate-600 mb-2">Didn't receive the code?</p>
+                        <button @click="handleResend" :disabled="resendDisabled || loading"
+                            class="text-brand-600 hover:text-brand-700 font-semibold text-sm focus:outline-none focus:underline disabled:opacity-50 disabled:cursor-not-allowed transition">
+                            <span x-show="!resendDisabled">Resend Code</span>
+                            <span x-show="resendDisabled">Resend in <span x-text="resendCountdown"></span>s</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Help Text -->
+            <div class="mt-6 text-center" x-show="!verified">
+                <a href="/static/login.html" class="text-sm text-slate-600 hover:text-slate-800 transition">
+                    ← Back to Login
+                </a>
+            </div>
+        </div>
+
+        <script>
+            function verifyEmailForm() {
+                return {
+                    code: ['', '', '', '', '', ''],
+                    loading: false,
+                    verified: false,
+                    errorMessage: '',
+                    userEmail: '',
+                    timeRemaining: 900, // 15 minutes in seconds
+                    resendDisabled: false,
+                    resendCountdown: 120, // 2 minutes in seconds
+                    timer: null,
+                    resendTimer: null,
+
+                    init() {
+                        // Get user email from localStorage
+                        const user = Auth.getUser();
+                        if (user && user.email) {
+                            this.userEmail = user.email;
+                        } else {
+                            // Redirect to login if no user found
+                            window.location.href = '/static/login.html';
+                            return;
+                        }
+
+                        // Check if already verified
+                        if (user.is_verified) {
+                            this.verified = true;
+                            setTimeout(() => {
+                                window.location.href = '/';
+                            }, 2000);
+                            return;
+                        }
+
+                        // Focus first input
+                        this.$nextTick(() => {
+                            document.getElementById('code-1')?.focus();
+                        });
+
+                        // Start expiration timer
+                        this.startTimer();
+                    },
+
+                    handleInput(event, index) {
+                        const value = event.target.value;
+
+                        // Only allow digits
+                        if (value && !/^\d$/.test(value)) {
+                            this.code[index - 1] = '';
+                            return;
+                        }
+
+                        // Move to next input if digit entered
+                        if (value && index < 6) {
+                            document.getElementById(`code-${index + 1}`)?.focus();
+                        }
+
+                        this.errorMessage = '';
+                    },
+
+                    handleKeyDown(event, index) {
+                        // Handle backspace
+                        if (event.key === 'Backspace' && !this.code[index - 1] && index > 1) {
+                            document.getElementById(`code-${index - 1}`)?.focus();
+                        }
+                    },
+
+                    handlePaste(event) {
+                        event.preventDefault();
+                        const pastedData = event.clipboardData.getData('text').trim();
+
+                        // Extract only digits
+                        const digits = pastedData.replace(/\D/g, '');
+
+                        if (digits.length === 6) {
+                            this.code = digits.split('');
+                            document.getElementById('code-6')?.focus();
+                        }
+                    },
+
+                    isCodeComplete() {
+                        return this.code.every(digit => digit !== '');
+                    },
+
+                    async handleVerify() {
+                        if (!this.isCodeComplete()) return;
+
+                        this.loading = true;
+                        this.errorMessage = '';
+
+                        const verificationCode = this.code.join('');
+
+                        try {
+                            const response = await fetch('/api/v1/auth/verify-email', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${Auth.getToken()}`
+                                },
+                                body: JSON.stringify({ code: verificationCode })
+                            });
+
+                            const data = await response.json();
+
+                            if (response.ok) {
+                                // Update user in localStorage
+                                const user = Auth.getUser();
+                                user.is_verified = true;
+                                localStorage.setItem('user', JSON.stringify(user));
+
+                                // Show success state
+                                this.verified = true;
+
+                                // Stop timers
+                                if (this.timer) clearInterval(this.timer);
+                                if (this.resendTimer) clearInterval(this.resendTimer);
+
+                                // Redirect to dashboard after 2 seconds
+                                setTimeout(() => {
+                                    window.location.href = '/';
+                                }, 2000);
+                            } else {
+                                this.errorMessage = data.detail || 'Verification failed. Please try again.';
+                                // Clear code inputs on error
+                                this.code = ['', '', '', '', '', ''];
+                                document.getElementById('code-1')?.focus();
+                            }
+                        } catch (error) {
+                            console.error('Verification error:', error);
+                            this.errorMessage = 'Network error. Please check your connection and try again.';
+                        } finally {
+                            this.loading = false;
+                        }
+                    },
+
+                    async handleResend() {
+                        if (this.resendDisabled || this.loading) return;
+
+                        this.loading = true;
+                        this.errorMessage = '';
+
+                        try {
+                            const response = await fetch('/api/v1/auth/resend-verification-code', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${Auth.getToken()}`
+                                },
+                            });
+
+                            const data = await response.json();
+
+                            if (response.ok) {
+                                // Reset timer to 15 minutes
+                                this.timeRemaining = 900;
+
+                                // Start resend cooldown (2 minutes)
+                                this.resendDisabled = true;
+                                this.resendCountdown = 120;
+                                this.startResendTimer();
+
+                                // Clear code inputs
+                                this.code = ['', '', '', '', '', ''];
+                                document.getElementById('code-1')?.focus();
+
+                                alert('New verification code sent! Please check your email.');
+                            } else {
+                                this.errorMessage = data.detail || 'Failed to resend code. Please try again later.';
+                            }
+                        } catch (error) {
+                            console.error('Resend error:', error);
+                            this.errorMessage = 'Network error. Please try again.';
+                        } finally {
+                            this.loading = false;
+                        }
+                    },
+
+                    startTimer() {
+                        this.timer = setInterval(() => {
+                            if (this.timeRemaining > 0) {
+                                this.timeRemaining--;
+                            } else {
+                                clearInterval(this.timer);
+                                this.errorMessage = 'Verification code expired. Please request a new one.';
+                            }
+                        }, 1000);
+                    },
+
+                    startResendTimer() {
+                        if (this.resendTimer) clearInterval(this.resendTimer);
+
+                        this.resendTimer = setInterval(() => {
+                            if (this.resendCountdown > 0) {
+                                this.resendCountdown--;
+                            } else {
+                                this.resendDisabled = false;
+                                clearInterval(this.resendTimer);
+                            }
+                        }, 1000);
+                    },
+
+                    formatTime(seconds) {
+                        const mins = Math.floor(seconds / 60);
+                        const secs = seconds % 60;
+                        return `${mins}:${secs.toString().padStart(2, '0')}`;
+                    }
+                }
+            }
+        </script>
+
+        <style>
+            [x-cloak] {
+                display: none !important;
+            }
+        </style>
+    </body>
+</html>

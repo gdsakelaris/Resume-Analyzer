@@ -74,6 +74,10 @@ class Settings(BaseSettings):
     S3_BUCKET_NAME: str = ""                    # S3 bucket name for resume storage
     USE_S3: bool = False                        # Toggle S3 vs local storage (for backward compatibility)
 
+    # AWS SES Settings (Email Verification)
+    AWS_SES_FROM_EMAIL: str = "noreply@yourdomain.com"  # Verified sender email in AWS SES
+    AWS_SES_FROM_NAME: str = "Resume Analyzer"           # Sender display name
+
     # Free Tier Settings
     FREE_TIER_CANDIDATE_LIMIT: int = 10         # Monthly candidate limit for free tier
 

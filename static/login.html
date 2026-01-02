@@ -182,9 +182,13 @@
                             // Store tokens using auth utility
                             Auth.login(data.access_token, data.refresh_token, data.user);
 
-                            // Redirect to main app after 1 second
+                            // Check if user is verified, redirect accordingly
                             setTimeout(() => {
-                                window.location.href = '/';
+                                if (data.user && data.user.is_verified) {
+                                    window.location.href = '/';
+                                } else {
+                                    window.location.href = '/static/verify-email.html';
+                                }
                             }, 1000);
 
                         } catch (error) {

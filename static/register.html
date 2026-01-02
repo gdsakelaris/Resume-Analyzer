@@ -366,9 +366,9 @@
                             // Store tokens automatically using auth utility
                             Auth.login(data.access_token, data.refresh_token, data.user);
 
-                            // Redirect to main app after 1.5 seconds
+                            // Redirect to verification page after 1.5 seconds
                             setTimeout(() => {
-                                window.location.href = '/';
+                                window.location.href = '/static/verify-email.html';
                             }, 1500);
 
                         } catch (error) {

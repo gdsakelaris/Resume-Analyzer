@@ -35,14 +35,26 @@
         <script src="/static/auth.js"></script>
         <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
-        <!-- Pre-render authentication check to prevent dashboard flash -->
+        <!-- Pre-render authentication and verification check to prevent dashboard flash -->
         <script>
-            // Check authentication BEFORE rendering the page
+            // Check authentication and verification BEFORE rendering the page
             (function() {
                 const token = localStorage.getItem('starscreen_access_token');
                 if (!token) {
                     // No token - redirect immediately before page renders
                     window.location.href = '/static/login.html';
+                    return;
+                }
+
+                // Check if user is verified
+                const userJson = localStorage.getItem('starscreen_user');
+                if (userJson) {
+                    const user = JSON.parse(userJson);
+                    if (!user.is_verified) {
+                        // Not verified - redirect to verification page
+                        window.location.href = '/static/verify-email.html';
+                        return;
+                    }
                 }
             })();
         </script>

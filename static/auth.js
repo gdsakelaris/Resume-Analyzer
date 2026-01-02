@@ -106,6 +106,21 @@ const Auth = {
     },
 
     /**
+     * Check if the current user's email is verified
+     */
+    isVerified() {
+        const user = this.getUser();
+        return user && user.is_verified === true;
+    },
+
+    /**
+     * Alias for getAccessToken (for compatibility)
+     */
+    getToken() {
+        return this.getAccessToken();
+    },
+
+    /**
      * Get Authorization headers for API requests
      *
      * Usage:
@@ -228,11 +243,11 @@ const Auth = {
 
 /**
  * Initialize authentication on page load
- * Protects pages that require login
+ * Protects pages that require login and email verification
  */
 document.addEventListener('DOMContentLoaded', function() {
     // List of pages that DON'T require authentication
-    const publicPages = ['login.html', 'register.html', 'pricing.html', 'checkout.html'];
+    const publicPages = ['login.html', 'register.html', 'pricing.html', 'checkout.html', 'verify-email.html'];
 
     const currentPage = window.location.pathname.split('/').pop();
     const isPublicPage = publicPages.some(page => currentPage.includes(page));
@@ -241,6 +256,14 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!isPublicPage && !Auth.isAuthenticated()) {
         console.log('[Auth] Unauthenticated user detected, redirecting to login');
         window.location.href = '/static/login.html';
+        return;
+    }
+
+    // If authenticated but not verified, and not on verification page, redirect to verification
+    if (Auth.isAuthenticated() && !Auth.isVerified() && !currentPage.includes('verify-email.html')) {
+        console.log('[Auth] Unverified user detected, redirecting to verification');
+        window.location.href = '/static/verify-email.html';
+        return;
     }
 });
 

@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 
 from app.core.config import settings
 from app.core.database import init_db
-from app.api.endpoints import jobs, candidates, auth, stripe_webhooks, subscriptions
+from app.api.endpoints import jobs, candidates, auth, stripe_webhooks, subscriptions, verification
 
 # Configure logging
 logging.basicConfig(
@@ -57,6 +57,7 @@ app.mount("/images", StaticFiles(directory="public/images"), name="images")
 
 # Include routers
 app.include_router(auth.router, prefix=settings.API_V1_STR)
+app.include_router(verification.router, prefix=settings.API_V1_STR)
 app.include_router(jobs.router, prefix=settings.API_V1_STR)
 app.include_router(candidates.router, prefix=settings.API_V1_STR)
 app.include_router(subscriptions.router, prefix=settings.API_V1_STR)

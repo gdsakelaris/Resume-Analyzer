@@ -67,18 +67,44 @@ async def get_current_user(
     return user
 
 
-async def get_current_active_subscription(
+async def get_verified_user(
     user: User = Depends(get_current_user),
+) -> User:
+    """
+    Get the current user and ensure their email is verified.
+
+    This dependency should be used for ALL protected endpoints that require
+    email verification (jobs, candidates, subscriptions, etc.).
+
+    The /auth/me endpoint should continue using get_current_user to allow
+    unverified users to access their profile.
+
+    Raises:
+        HTTPException 403: If user's email is not verified
+    """
+    if not user.is_verified:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Email verification required. Please verify your email to access this feature."
+        )
+
+    return user
+
+
+async def get_current_active_subscription(
+    user: User = Depends(get_verified_user),
     db: Session = Depends(get_db)
 ) -> Subscription:
     """
     Get the current user's subscription and verify it's active.
 
     This dependency enforces billing requirements:
+    - User must be verified (email verification)
     - User must have an active subscription (ACTIVE or TRIALING status)
     - Used to protect paid features like candidate uploads
 
     Raises:
+        HTTPException 403: Email not verified
         HTTPException 402: Payment required (subscription inactive)
         HTTPException 404: Subscription not found
     """
@@ -99,17 +125,22 @@ async def get_current_active_subscription(
     return subscription
 
 
-def get_tenant_id(user: User = Depends(get_current_user)) -> UUID:
+def get_tenant_id(user: User = Depends(get_verified_user)) -> UUID:
     """
-    Extract tenant_id from the current user.
+    Extract tenant_id from the current verified user.
 
     This is the core multi-tenancy dependency. All queries must filter by tenant_id
     to prevent cross-tenant data access.
+
+    Requires email verification.
 
     Usage:
         @router.get("/jobs")
         def list_jobs(tenant_id: UUID = Depends(get_tenant_id), db: Session = Depends(get_db)):
             jobs = db.query(Job).filter(Job.tenant_id == tenant_id).all()
+
+    Raises:
+        HTTPException 403: Email not verified
     """
     return user.tenant_id
 

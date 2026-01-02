@@ -18,6 +18,7 @@ from app.core.database import get_db
 from app.core.security import verify_password, get_password_hash, create_access_token, create_refresh_token, decode_token
 from app.core.deps import get_current_user
 from app.core.config import settings
+from app.core.verification import create_verification_code
 from app.models.user import User
 from app.models.subscription import Subscription, SubscriptionPlan, SubscriptionStatus
 from app.schemas.user import (
@@ -27,6 +28,7 @@ from app.schemas.user import (
     TokenRefreshRequest,
     UserResponse
 )
+from app.tasks.email_tasks import send_verification_email_task
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 logger = logging.getLogger(__name__)
@@ -82,6 +84,19 @@ def register(
     db.refresh(new_user)
 
     logger.info(f"New user registered: {new_user.email} (tenant_id: {new_user.tenant_id})")
+
+    # Generate and send verification code
+    try:
+        verification = create_verification_code(db, new_user.id)
+        send_verification_email_task.delay(
+            to_email=new_user.email,
+            verification_code=verification.code,
+            user_name=new_user.full_name
+        )
+        logger.info(f"Verification email queued for {new_user.email}")
+    except Exception as e:
+        logger.error(f"Failed to queue verification email: {e}")
+        # Don't fail registration if email fails - user can request resend
 
     # Generate JWT tokens
     access_token = create_access_token(data={"sub": str(new_user.id), "tenant_id": str(new_user.tenant_id)})
