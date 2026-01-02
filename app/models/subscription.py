@@ -42,8 +42,8 @@ class SubscriptionPlan(str, enum.Enum):
     FREE: Trial tier (10 candidates/month) - Perfect for testing
     STARTER (UI: "Recruiter"): Solo recruiters ($20/mo, 100 candidates/month)
     SMALL_BUSINESS: Small teams ($149/mo, 1,000 candidates/month)
-    PROFESSIONAL: Growing companies ($399/mo, unlimited)
-    ENTERPRISE: High-volume recruiting ($500/mo base + $0.25 per candidate)
+    PROFESSIONAL: Large teams ($499/mo, 5,000 candidates/month)
+    ENTERPRISE: Reserved for future custom enterprise solutions
     """
     FREE = "free"
     STARTER = "starter"
@@ -72,8 +72,8 @@ class SubscriptionPlan(str, enum.Enum):
             SubscriptionPlan.FREE: settings.FREE_TIER_CANDIDATE_LIMIT,
             SubscriptionPlan.STARTER: 100,
             SubscriptionPlan.SMALL_BUSINESS: 1000,
-            SubscriptionPlan.PROFESSIONAL: 999999,  # Unlimited (represented as very large number)
-            SubscriptionPlan.ENTERPRISE: 999999  # Unlimited (pay per use)
+            SubscriptionPlan.PROFESSIONAL: 5000,  # Enterprise tier with fixed limit
+            SubscriptionPlan.ENTERPRISE: 5000  # Reserved for future use
         }
         return limits.get(self, settings.FREE_TIER_CANDIDATE_LIMIT)
 
@@ -84,16 +84,15 @@ class SubscriptionPlan(str, enum.Enum):
             SubscriptionPlan.FREE: 0,
             SubscriptionPlan.STARTER: 20,
             SubscriptionPlan.SMALL_BUSINESS: 149,
-            SubscriptionPlan.PROFESSIONAL: 399,
-            SubscriptionPlan.ENTERPRISE: 500  # Base fee + per-candidate pricing
+            SubscriptionPlan.PROFESSIONAL: 499,  # Enterprise tier pricing
+            SubscriptionPlan.ENTERPRISE: 499  # Reserved for future use
         }
         return prices.get(self, 0)
 
     @property
     def per_candidate_price_usd(self) -> float:
-        """Get the per-candidate price in USD (only for ENTERPRISE)."""
-        if self == SubscriptionPlan.ENTERPRISE:
-            return 0.25
+        """Get the per-candidate price in USD (reserved for future metered billing)."""
+        # No longer using per-candidate pricing
         return 0.0
 
     @property
@@ -151,8 +150,6 @@ class Subscription(Base):
     @property
     def can_upload_candidate(self) -> bool:
         """Check if user can upload another candidate this month."""
-        if self.plan == SubscriptionPlan.ENTERPRISE:
-            return True
         return self.is_active and self.candidates_used_this_month < self.monthly_candidate_limit
 
     @property
@@ -166,8 +163,6 @@ class Subscription(Base):
         """Get the usage percentage for this billing period (0-100)."""
         if self.monthly_candidate_limit == 0:
             return 0.0
-        if self.plan == SubscriptionPlan.ENTERPRISE:
-            return 0.0  # Unlimited plan
         return min(100.0, (self.candidates_used_this_month / self.monthly_candidate_limit) * 100)
 
     def sync_plan_limits(self) -> None:
@@ -176,19 +171,11 @@ class Subscription(Base):
 
     def calculate_monthly_cost(self) -> float:
         """
-        Calculate total monthly cost based on plan and usage.
+        Calculate total monthly cost based on plan.
 
-        For ENTERPRISE: base_price + (candidates_used * per_candidate_price)
-        For other plans: fixed monthly price
+        All plans now have fixed monthly pricing.
         """
-        base_cost = self.plan.base_price_usd
-
-        if self.plan == SubscriptionPlan.ENTERPRISE:
-            # Enterprise: $500/mo base + $0.50 per candidate
-            usage_cost = self.candidates_used_this_month * self.plan.per_candidate_price_usd
-            return float(base_cost) + usage_cost
-
-        return float(base_cost)
+        return float(self.plan.base_price_usd)
 
     @property
     def estimated_monthly_cost(self) -> float:

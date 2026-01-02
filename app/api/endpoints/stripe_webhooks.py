@@ -119,7 +119,7 @@ def handle_subscription_created(db: Session, stripe_sub: dict):
         },
         settings.STRIPE_PRICE_ID_ENTERPRISE_MONTHLY: {
             "plan": SubscriptionPlan.PROFESSIONAL,
-            "limit": 999999  # Unlimited
+            "limit": 5000  # Enterprise tier with fixed limit
         }
     }
 
@@ -165,7 +165,7 @@ def handle_subscription_updated(db: Session, stripe_sub: dict):
         },
         settings.STRIPE_PRICE_ID_ENTERPRISE_MONTHLY: {
             "plan": SubscriptionPlan.PROFESSIONAL,
-            "limit": 999999  # Unlimited
+            "limit": 5000  # Enterprise tier with fixed limit
         }
     }
 

@@ -103,7 +103,7 @@ async def create_subscription(
             },
             "PROFESSIONAL": {
                 "price_id": settings.STRIPE_PRICE_ID_ENTERPRISE_MONTHLY,
-                "limit": 999999,  # Unlimited (represented as very large number)
+                "limit": 5000,  # Enterprise tier with fixed limit
                 "plan": SubscriptionPlan.PROFESSIONAL
             }
         }

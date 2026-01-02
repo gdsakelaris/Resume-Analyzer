@@ -53,7 +53,7 @@ async def upload_resume(
     - Enforces monthly candidate limits based on subscription plan
 
     Flow:
-    1. Check subscription limits (FREE: 5/mo, STARTER: 100/mo, SMALL_BUSINESS: 250/mo, PROFESSIONAL: 1000/mo, ENTERPRISE: unlimited at $0.50/candidate)
+    1. Check subscription limits (FREE: 10/mo, STARTER: 100/mo, SMALL_BUSINESS: 1,000/mo, PROFESSIONAL: 5,000/mo)
     2. Validate file type (PDF, DOC, DOCX)
     3. Save file securely (UUID-based naming to prevent path traversal)
     4. Create database record with status=UPLOADED
