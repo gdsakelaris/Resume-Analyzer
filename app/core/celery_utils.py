@@ -39,21 +39,21 @@ def queue_task_safely(task: Task, *args, **kwargs) -> bool:
         )
     """
     try:
-        # Use apply_async with explicit connection
-        # This ensures we get a fresh connection from the pool
-        result = task.apply_async(args=args, kwargs=kwargs, retry=True)
+        # Use apply_async with retry policy
+        # This is more reliable than delay() in FastAPI contexts
+        result = task.apply_async(
+            args=args,
+            kwargs=kwargs,
+            retry=True,
+            retry_policy={
+                'max_retries': 3,
+                'interval_start': 0,
+                'interval_step': 0.2,
+                'interval_max': 0.2,
+            }
+        )
         logger.info(f"Task {task.name} queued successfully: {result.id}")
         return True
     except Exception as e:
         logger.error(f"Failed to queue task {task.name}: {e}")
-        # Try one more time with a fresh connection
-        try:
-            # Close existing connections in the pool
-            celery_app.connection_or_acquire().close()
-            # Try again
-            result = task.apply_async(args=args, kwargs=kwargs, retry=True)
-            logger.info(f"Task {task.name} queued on retry: {result.id}")
-            return True
-        except Exception as retry_error:
-            logger.error(f"Failed to queue task {task.name} on retry: {retry_error}")
-            return False
+        return False
