@@ -44,6 +44,11 @@ celery_app.conf.update(
     broker_connection_retry=True,
     broker_connection_retry_on_startup=True,
     broker_connection_max_retries=10,
+
+    # Connection pool settings - ensure connections are refreshed
+    broker_pool_limit=None,  # No limit on broker connections
+    broker_heartbeat=None,  # Disable heartbeat (can cause issues with connection reuse)
+    broker_connection_timeout=30,  # 30 second timeout for establishing connection
 )
 
 # Auto-discover tasks from app.tasks module
