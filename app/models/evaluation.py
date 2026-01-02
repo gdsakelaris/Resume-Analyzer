@@ -30,7 +30,7 @@ class Evaluation(Base):
     # Multi-tenancy: Inherited from candidate, denormalized for query performance
     tenant_id = Column(UUID(as_uuid=True), ForeignKey("users.tenant_id"), nullable=False, index=True)
 
-    candidate_id = Column(Integer, ForeignKey("candidates.id"), nullable=False, unique=True, index=True)
+    candidate_id = Column(Integer, ForeignKey("candidates.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
 
     # The Headline Score (0-100)
     match_score = Column(Float, nullable=False, index=True)

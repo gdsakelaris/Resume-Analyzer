@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 
 from app.core.config import settings
 from app.core.database import init_db
-from app.api.endpoints import jobs, candidates, auth, stripe_webhooks, subscriptions, verification
+from app.api.endpoints import jobs, candidates, auth, stripe_webhooks, subscriptions, verification, admin
 
 # Configure logging
 logging.basicConfig(
@@ -62,6 +62,7 @@ app.include_router(jobs.router, prefix=settings.API_V1_STR)
 app.include_router(candidates.router, prefix=settings.API_V1_STR)
 app.include_router(subscriptions.router, prefix=settings.API_V1_STR)
 app.include_router(stripe_webhooks.router, prefix=settings.API_V1_STR)
+app.include_router(admin.router, prefix=settings.API_V1_STR)
 
 
 @app.get("/")

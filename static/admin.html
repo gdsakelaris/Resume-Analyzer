@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Starscreen</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>
+        [x-cloak] { display: none !important; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            200: '#bfdbfe',
+                            300: '#93c5fd',
+                            400: '#60a5fa',
+                            500: '#3b82f6',
+                            600: '#0651ed',
+                            700: '#1d4ed8',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-slate-50">
+    <div x-data="adminApp()" x-init="init()" class="min-h-screen">
+        <!-- Header -->
+        <div class="bg-white border-b border-slate-200 sticky top-0 z-40">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center h-16">
+                    <div class="flex items-center gap-4">
+                        <h1 class="text-2xl font-bold text-slate-900">🔧 Admin Dashboard</h1>
+                        <span class="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full font-semibold">SUPERUSER ONLY</span>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <span class="text-sm text-slate-500">Last refresh: <span x-text="lastRefresh"></span></span>
+                        <button @click="loadAllData()" class="px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 text-sm font-medium">
+                            Refresh All
+                        </button>
+                        <a href="/static/index.html" class="text-sm text-slate-600 hover:text-brand-600">← Back to App</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Stats Overview -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div class="bg-white rounded-lg p-6 shadow-sm border border-slate-200">
+                    <div class="text-sm font-medium text-slate-500 mb-1">Total Users</div>
+                    <div class="text-3xl font-bold text-slate-900" x-text="stats.users"></div>
+                </div>
+                <div class="bg-white rounded-lg p-6 shadow-sm border border-slate-200">
+                    <div class="text-sm font-medium text-slate-500 mb-1">Total Jobs</div>
+                    <div class="text-3xl font-bold text-slate-900" x-text="stats.jobs"></div>
+                </div>
+                <div class="bg-white rounded-lg p-6 shadow-sm border border-slate-200">
+                    <div class="text-sm font-medium text-slate-500 mb-1">Total Candidates</div>
+                    <div class="text-3xl font-bold text-slate-900" x-text="stats.candidates"></div>
+                </div>
+                <div class="bg-white rounded-lg p-6 shadow-sm border border-slate-200">
+                    <div class="text-sm font-medium text-slate-500 mb-1">Active Subscriptions</div>
+                    <div class="text-3xl font-bold text-slate-900" x-text="stats.subscriptions"></div>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="bg-white rounded-lg shadow-sm border border-slate-200 mb-6">
+                <div class="border-b border-slate-200">
+                    <nav class="flex gap-4 px-6">
+                        <button @click="activeTab = 'users'"
+                                :class="activeTab === 'users' ? 'border-brand-500 text-brand-600' : 'border-transparent text-slate-500 hover:text-slate-700'"
+                                class="py-4 px-2 border-b-2 font-medium text-sm">
+                            Users
+                        </button>
+                        <button @click="activeTab = 'subscriptions'"
+                                :class="activeTab === 'subscriptions' ? 'border-brand-500 text-brand-600' : 'border-transparent text-slate-500 hover:text-slate-700'"
+                                class="py-4 px-2 border-b-2 font-medium text-sm">
+                            Subscriptions
+                        </button>
+                        <button @click="activeTab = 'jobs'"
+                                :class="activeTab === 'jobs' ? 'border-brand-500 text-brand-600' : 'border-transparent text-slate-500 hover:text-slate-700'"
+                                class="py-4 px-2 border-b-2 font-medium text-sm">
+                            Jobs
+                        </button>
+                        <button @click="activeTab = 'candidates'"
+                                :class="activeTab === 'candidates' ? 'border-brand-500 text-brand-600' : 'border-transparent text-slate-500 hover:text-slate-700'"
+                                class="py-4 px-2 border-b-2 font-medium text-sm">
+                            Candidates
+                        </button>
+                        <button @click="activeTab = 'evaluations'"
+                                :class="activeTab === 'evaluations' ? 'border-brand-500 text-brand-600' : 'border-transparent text-slate-500 hover:text-slate-700'"
+                                class="py-4 px-2 border-b-2 font-medium text-sm">
+                            Evaluations
+                        </button>
+                    </nav>
+                </div>
+
+                <!-- Tab Content -->
+                <div class="p-6">
+                    <!-- Users Tab -->
+                    <div x-show="activeTab === 'users'" x-cloak>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-slate-200">
+                                <thead class="bg-slate-50">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">ID</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Email</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Tenant ID</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Verified</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Created</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-slate-200">
+                                    <template x-for="user in users" :key="user.id">
+                                        <tr class="hover:bg-slate-50">
+                                            <td class="px-4 py-3 text-sm text-slate-900" x-text="user.id"></td>
+                                            <td class="px-4 py-3 text-sm text-slate-900" x-text="user.email"></td>
+                                            <td class="px-4 py-3 text-sm text-slate-500 font-mono text-xs" x-text="user.tenant_id"></td>
+                                            <td class="px-4 py-3">
+                                                <span :class="user.is_verified ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'"
+                                                      class="px-2 py-1 text-xs font-medium rounded-full"
+                                                      x-text="user.is_verified ? 'Yes' : 'No'"></span>
+                                            </td>
+                                            <td class="px-4 py-3 text-sm text-slate-500" x-text="new Date(user.created_at).toLocaleString()"></td>
+                                            <td class="px-4 py-3">
+                                                <button @click="deleteUser(user.id)" class="text-red-600 hover:text-red-800 text-sm font-medium">Delete</button>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Subscriptions Tab -->
+                    <div x-show="activeTab === 'subscriptions'" x-cloak>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-slate-200">
+                                <thead class="bg-slate-50">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">ID</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">User ID</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Plan</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Status</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Usage</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Period End</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-slate-200">
+                                    <template x-for="sub in subscriptions" :key="sub.id">
+                                        <tr class="hover:bg-slate-50">
+                                            <td class="px-4 py-3 text-sm text-slate-900" x-text="sub.id"></td>
+                                            <td class="px-4 py-3 text-sm text-slate-900" x-text="sub.user_id"></td>
+                                            <td class="px-4 py-3">
+                                                <span class="px-2 py-1 text-xs font-medium rounded-full bg-brand-100 text-brand-800"
+                                                      x-text="sub.plan"></span>
+                                            </td>
+                                            <td class="px-4 py-3">
+                                                <span :class="sub.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'"
+                                                      class="px-2 py-1 text-xs font-medium rounded-full"
+                                                      x-text="sub.status"></span>
+                                            </td>
+                                            <td class="px-4 py-3 text-sm text-slate-900" x-text="`${sub.candidates_used_this_month}/${sub.monthly_candidate_limit}`"></td>
+                                            <td class="px-4 py-3 text-sm text-slate-500" x-text="new Date(sub.current_period_end).toLocaleDateString()"></td>
+                                            <td class="px-4 py-3">
+                                                <button @click="resetUsage(sub.id)" class="text-brand-600 hover:text-brand-800 text-sm font-medium mr-2">Reset Usage</button>
+                                                <button @click="deleteSubscription(sub.id)" class="text-red-600 hover:text-red-800 text-sm font-medium">Delete</button>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Jobs Tab -->
+                    <div x-show="activeTab === 'jobs'" x-cloak>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-slate-200">
+                                <thead class="bg-slate-50">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">ID</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Title</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Tenant ID</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Status</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Created</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-slate-200">
+                                    <template x-for="job in jobs" :key="job.id">
+                                        <tr class="hover:bg-slate-50">
+                                            <td class="px-4 py-3 text-sm text-slate-900" x-text="job.id"></td>
+                                            <td class="px-4 py-3 text-sm text-slate-900" x-text="job.title"></td>
+                                            <td class="px-4 py-3 text-sm text-slate-500 font-mono text-xs" x-text="job.tenant_id"></td>
+                                            <td class="px-4 py-3">
+                                                <span class="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800"
+                                                      x-text="job.status"></span>
+                                            </td>
+                                            <td class="px-4 py-3 text-sm text-slate-500" x-text="new Date(job.created_at).toLocaleString()"></td>
+                                            <td class="px-4 py-3">
+                                                <button @click="deleteJob(job.id)" class="text-red-600 hover:text-red-800 text-sm font-medium">Delete</button>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Candidates Tab -->
+                    <div x-show="activeTab === 'candidates'" x-cloak>
+                        <div class="mb-4">
+                            <input type="text" x-model="candidateSearch" @input="searchCandidates()"
+                                   placeholder="Search by filename or email..."
+                                   class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500">
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-slate-200">
+                                <thead class="bg-slate-50">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">ID</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Filename</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Job ID</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Email</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Status</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Created</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-slate-200">
+                                    <template x-for="candidate in filteredCandidates" :key="candidate.id">
+                                        <tr class="hover:bg-slate-50">
+                                            <td class="px-4 py-3 text-sm text-slate-900" x-text="candidate.id"></td>
+                                            <td class="px-4 py-3 text-sm text-slate-900" x-text="candidate.original_filename"></td>
+                                            <td class="px-4 py-3 text-sm text-slate-900" x-text="candidate.job_id"></td>
+                                            <td class="px-4 py-3 text-sm text-slate-500" x-text="candidate.email || 'N/A'"></td>
+                                            <td class="px-4 py-3">
+                                                <span :class="{
+                                                    'bg-green-100 text-green-800': candidate.status === 'SCORED',
+                                                    'bg-blue-100 text-blue-800': candidate.status === 'PROCESSING',
+                                                    'bg-yellow-100 text-yellow-800': candidate.status === 'UPLOADED',
+                                                    'bg-red-100 text-red-800': candidate.status === 'FAILED'
+                                                }" class="px-2 py-1 text-xs font-medium rounded-full" x-text="candidate.status"></span>
+                                            </td>
+                                            <td class="px-4 py-3 text-sm text-slate-500" x-text="new Date(candidate.created_at).toLocaleString()"></td>
+                                            <td class="px-4 py-3">
+                                                <button @click="deleteCandidate(candidate.id, candidate.job_id)" class="text-red-600 hover:text-red-800 text-sm font-medium">Delete</button>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Evaluations Tab -->
+                    <div x-show="activeTab === 'evaluations'" x-cloak>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-slate-200">
+                                <thead class="bg-slate-50">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">ID</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Candidate ID</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Match Score</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Created</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-slate-200">
+                                    <template x-for="eval in evaluations" :key="eval.id">
+                                        <tr class="hover:bg-slate-50">
+                                            <td class="px-4 py-3 text-sm text-slate-900" x-text="eval.id"></td>
+                                            <td class="px-4 py-3 text-sm text-slate-900" x-text="eval.candidate_id"></td>
+                                            <td class="px-4 py-3">
+                                                <span class="text-lg font-bold text-brand-600" x-text="eval.match_score"></span>
+                                            </td>
+                                            <td class="px-4 py-3 text-sm text-slate-500" x-text="new Date(eval.created_at).toLocaleString()"></td>
+                                            <td class="px-4 py-3">
+                                                <button @click="deleteEvaluation(eval.id)" class="text-red-600 hover:text-red-800 text-sm font-medium">Delete</button>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Danger Zone -->
+            <div class="bg-red-50 border-2 border-red-300 rounded-lg p-6">
+                <h2 class="text-lg font-bold text-red-900 mb-4">⚠️ Danger Zone</h2>
+                <div class="flex gap-4">
+                    <button @click="deleteAllCandidates()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium">
+                        Delete All Candidates
+                    </button>
+                    <button @click="deleteAllJobs()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium">
+                        Delete All Jobs
+                    </button>
+                    <button @click="resetAllUsage()" class="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 font-medium">
+                        Reset All Subscription Usage
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function adminApp() {
+            return {
+                activeTab: 'users',
+                lastRefresh: new Date().toLocaleTimeString(),
+                stats: {
+                    users: 0,
+                    jobs: 0,
+                    candidates: 0,
+                    subscriptions: 0
+                },
+                users: [],
+                subscriptions: [],
+                jobs: [],
+                candidates: [],
+                evaluations: [],
+                filteredCandidates: [],
+                candidateSearch: '',
+
+                async init() {
+                    await this.loadAllData();
+                },
+
+                async loadAllData() {
+                    await Promise.all([
+                        this.loadUsers(),
+                        this.loadSubscriptions(),
+                        this.loadJobs(),
+                        this.loadCandidates(),
+                        this.loadEvaluations()
+                    ]);
+                    this.lastRefresh = new Date().toLocaleTimeString();
+                },
+
+                async loadUsers() {
+                    const response = await fetch('/api/admin/users', {
+                        headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+                    });
+                    this.users = await response.json();
+                    this.stats.users = this.users.length;
+                },
+
+                async loadSubscriptions() {
+                    const response = await fetch('/api/admin/subscriptions', {
+                        headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+                    });
+                    this.subscriptions = await response.json();
+                    this.stats.subscriptions = this.subscriptions.filter(s => s.status === 'active').length;
+                },
+
+                async loadJobs() {
+                    const response = await fetch('/api/admin/jobs', {
+                        headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+                    });
+                    this.jobs = await response.json();
+                    this.stats.jobs = this.jobs.length;
+                },
+
+                async loadCandidates() {
+                    const response = await fetch('/api/admin/candidates', {
+                        headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+                    });
+                    this.candidates = await response.json();
+                    this.filteredCandidates = this.candidates;
+                    this.stats.candidates = this.candidates.length;
+                },
+
+                async loadEvaluations() {
+                    const response = await fetch('/api/admin/evaluations', {
+                        headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+                    });
+                    this.evaluations = await response.json();
+                },
+
+                searchCandidates() {
+                    const search = this.candidateSearch.toLowerCase();
+                    this.filteredCandidates = this.candidates.filter(c =>
+                        c.original_filename.toLowerCase().includes(search) ||
+                        (c.email && c.email.toLowerCase().includes(search))
+                    );
+                },
+
+                async deleteUser(id) {
+                    if (!confirm('Are you sure? This will delete all jobs, candidates, and subscriptions for this user.')) return;
+                    await fetch(`/api/admin/users/${id}`, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+                    });
+                    await this.loadUsers();
+                },
+
+                async deleteSubscription(id) {
+                    if (!confirm('Delete this subscription?')) return;
+                    await fetch(`/api/admin/subscriptions/${id}`, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+                    });
+                    await this.loadSubscriptions();
+                },
+
+                async resetUsage(id) {
+                    await fetch(`/api/admin/subscriptions/${id}/reset-usage`, {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+                    });
+                    await this.loadSubscriptions();
+                },
+
+                async deleteJob(id) {
+                    if (!confirm('Delete this job and all its candidates?')) return;
+                    await fetch(`/api/admin/jobs/${id}`, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+                    });
+                    await this.loadJobs();
+                    await this.loadCandidates();
+                },
+
+                async deleteCandidate(candidateId, jobId) {
+                    if (!confirm('Delete this candidate?')) return;
+                    try {
+                        await fetch(`/api/admin/candidates/${candidateId}`, {
+                            method: 'DELETE',
+                            headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+                        });
+                        await this.loadCandidates();
+                        await this.loadEvaluations();
+                        alert('Candidate deleted successfully');
+                    } catch (error) {
+                        alert('Error deleting candidate: ' + error.message);
+                    }
+                },
+
+                async deleteEvaluation(id) {
+                    if (!confirm('Delete this evaluation?')) return;
+                    await fetch(`/api/admin/evaluations/${id}`, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+                    });
+                    await this.loadEvaluations();
+                },
+
+                async deleteAllCandidates() {
+                    if (!confirm('⚠️ DELETE ALL CANDIDATES? This cannot be undone!')) return;
+                    if (!confirm('Are you ABSOLUTELY sure? Type YES in the next prompt')) return;
+                    const confirmation = prompt('Type YES to confirm:');
+                    if (confirmation !== 'YES') return;
+
+                    await fetch('/api/admin/candidates/delete-all', {
+                        method: 'DELETE',
+                        headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+                    });
+                    await this.loadCandidates();
+                    await this.loadEvaluations();
+                },
+
+                async deleteAllJobs() {
+                    if (!confirm('⚠️ DELETE ALL JOBS AND CANDIDATES? This cannot be undone!')) return;
+                    const confirmation = prompt('Type YES to confirm:');
+                    if (confirmation !== 'YES') return;
+
+                    await fetch('/api/admin/jobs/delete-all', {
+                        method: 'DELETE',
+                        headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+                    });
+                    await this.loadJobs();
+                    await this.loadCandidates();
+                },
+
+                async resetAllUsage() {
+                    if (!confirm('Reset usage counters for ALL subscriptions?')) return;
+                    await fetch('/api/admin/subscriptions/reset-all-usage', {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+                    });
+                    await this.loadSubscriptions();
+                }
+            }
+        }
+    </script>
+</body>
+</html>
