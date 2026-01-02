@@ -150,6 +150,12 @@
                             Manage Billing
                         </a>
                         <button
+                            onclick="deleteAccount()"
+                            class="text-sm text-red-600 hover:text-red-900 font-medium px-3 py-2 rounded-lg hover:bg-red-50 transition"
+                        >
+                            Delete Account
+                        </button>
+                        <button
                             onclick="Auth.logout()"
                             class="text-sm text-slate-600 hover:text-slate-900 font-medium px-3 py-2 rounded-lg hover:bg-slate-100 transition"
                         >
@@ -1237,6 +1243,75 @@
 
         <script>
             const API_BASE = '/api/v1';
+
+            /**
+             * Delete the current user's account
+             * Shows confirmation dialog before proceeding
+             */
+            async function deleteAccount() {
+                // Show confirmation dialog
+                const confirmed = confirm(
+                    '⚠️ WARNING: Delete Account?\n\n' +
+                    'This will:\n' +
+                    '• Cancel your Stripe subscription (you won\'t be charged again)\n' +
+                    '• Delete ALL your data (jobs, candidates, evaluations)\n' +
+                    '• This action is IRREVERSIBLE\n\n' +
+                    'Are you absolutely sure you want to delete your account?'
+                );
+
+                if (!confirmed) {
+                    return;
+                }
+
+                // Double confirmation
+                const doubleConfirm = confirm(
+                    'Final confirmation: Type YES in the next prompt to delete your account permanently.'
+                );
+
+                if (!doubleConfirm) {
+                    return;
+                }
+
+                const finalConfirmation = prompt('Type YES (in capital letters) to confirm account deletion:');
+
+                if (finalConfirmation !== 'YES') {
+                    alert('Account deletion canceled. You must type "YES" exactly to confirm.');
+                    return;
+                }
+
+                try {
+                    console.log('[DeleteAccount] Sending delete request...');
+
+                    const response = await Auth.fetch(`${API_BASE}/auth/me`, {
+                        method: 'DELETE'
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        console.log('[DeleteAccount] Account deleted successfully:', data);
+
+                        // Show success message
+                        alert(
+                            '✅ Account Deleted Successfully\n\n' +
+                            (data.stripe_subscription_canceled
+                                ? '• Your Stripe subscription has been canceled\n'
+                                : '• No active subscription to cancel\n') +
+                            '• All your data has been deleted\n\n' +
+                            'You will now be redirected to the login page.'
+                        );
+
+                        // Clear auth tokens and redirect
+                        Auth.logout();
+                    } else {
+                        const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
+                        console.error('[DeleteAccount] Failed to delete account:', errorData);
+                        alert(`❌ Failed to delete account:\n\n${errorData.detail}`);
+                    }
+                } catch (error) {
+                    console.error('[DeleteAccount] Error:', error);
+                    alert(`❌ Error deleting account:\n\n${error.message}`);
+                }
+            }
 
             // Subscription status component
             function subscriptionStatus() {
