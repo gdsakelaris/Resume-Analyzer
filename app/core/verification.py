@@ -6,7 +6,7 @@ Handles generation, validation, and lifecycle management of 6-digit verification
 
 import secrets
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, Tuple
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
@@ -60,7 +60,7 @@ def create_verification_code(db: Session, user_id: uuid.UUID) -> EmailVerificati
 
     # Generate new code
     code = generate_verification_code()
-    expires_at = datetime.utcnow() + timedelta(minutes=CODE_EXPIRATION_MINUTES)
+    expires_at = datetime.now(timezone.utc) + timedelta(minutes=CODE_EXPIRATION_MINUTES)
 
     # Create verification record
     verification = EmailVerification(
@@ -68,7 +68,7 @@ def create_verification_code(db: Session, user_id: uuid.UUID) -> EmailVerificati
         user_id=user_id,
         code=code,
         expires_at=expires_at,
-        created_at=datetime.utcnow(),
+        created_at=datetime.now(timezone.utc),
         attempts=0,
         is_used=False
     )
@@ -123,7 +123,7 @@ def verify_code(db: Session, user_id: uuid.UUID, code: str) -> Tuple[bool, str]:
         return False, "Too many attempts. Please request a new code."
 
     # Check expiration
-    if datetime.utcnow() > verification.expires_at:
+    if datetime.now(timezone.utc) > verification.expires_at:
         verification.is_used = True
         db.commit()
         return False, "Verification code has expired. Please request a new code."
@@ -157,7 +157,7 @@ def cleanup_expired_codes(db: Session) -> int:
         int: Number of codes deleted
     """
     # Delete codes older than 24 hours
-    cutoff_time = datetime.utcnow() - timedelta(hours=24)
+    cutoff_time = datetime.now(timezone.utc) - timedelta(hours=24)
 
     deleted = db.query(EmailVerification).filter(
         EmailVerification.created_at < cutoff_time
@@ -181,5 +181,5 @@ def get_active_verification(db: Session, user_id: uuid.UUID) -> Optional[EmailVe
     return db.query(EmailVerification).filter(
         EmailVerification.user_id == user_id,
         EmailVerification.is_used == False,
-        EmailVerification.expires_at > datetime.utcnow()
+        EmailVerification.expires_at > datetime.now(timezone.utc)
     ).order_by(EmailVerification.created_at.desc()).first()
