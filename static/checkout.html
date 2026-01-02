@@ -197,7 +197,7 @@
                             <div class="space-y-3 mb-6">
                                 <div class="flex justify-between">
                                     <span class="text-slate-700" x-text="planName"></span>
-                                    <span class="font-semibold text-slate-900" x-text="planPrice"></span>
+                                    <span class="font-semibold text-slate-900" x-text="planPriceDisplay"></span>
                                 </div>
                                 <div class="flex justify-between text-sm">
                                     <span class="text-slate-600">Billing Period</span>
@@ -212,7 +212,7 @@
                             <div class="border-t border-slate-200 pt-4 mb-6">
                                 <div class="flex justify-between">
                                     <span class="font-semibold text-slate-900">Total Due Today</span>
-                                    <span class="font-semibold text-slate-900" x-text="planPrice"></span>
+                                    <span class="font-semibold text-slate-900" x-text="totalDueToday"></span>
                                 </div>
                             </div>
 
@@ -254,6 +254,8 @@
                     billingPeriod: 'monthly',
                     planName: '',
                     planPrice: '',
+                    planPriceDisplay: '',
+                    totalDueToday: '',
                     candidateLimit: '',
                     firstChargeDate: '',
                     planFeatures: [],
@@ -331,6 +333,19 @@
                         const plan = plans[this.planTier];
                         this.planName = plan.name;
                         this.planPrice = this.billingPeriod === 'monthly' ? plan.price_monthly : plan.price_annual;
+
+                        // Calculate total due today
+                        if (this.billingPeriod === 'monthly') {
+                            this.planPriceDisplay = plan.price_monthly;
+                            this.totalDueToday = plan.price_monthly;
+                        } else {
+                            // For annual billing, show monthly rate but charge yearly total
+                            this.planPriceDisplay = plan.price_annual + '/month';
+                            const monthlyRate = parseFloat(plan.price_annual.replace('$', ''));
+                            const annualTotal = monthlyRate * 12;
+                            this.totalDueToday = '$' + annualTotal.toFixed(0);
+                        }
+
                         this.candidateLimit = plan.limit;
                         this.planFeatures = plan.features;
                     },
