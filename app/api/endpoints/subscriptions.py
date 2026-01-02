@@ -192,6 +192,7 @@ async def create_subscription(
         subscription.plan = tier_config['plan']
         subscription.status = SubscriptionStatus.ACTIVE
         subscription.monthly_candidate_limit = tier_config['limit']
+        subscription.candidates_used_this_month = 0  # Reset usage counter for new subscription
         # Convert Unix timestamps to datetime objects
         subscription.current_period_start = datetime.fromtimestamp(stripe_subscription.current_period_start)
         subscription.current_period_end = datetime.fromtimestamp(stripe_subscription.current_period_end)

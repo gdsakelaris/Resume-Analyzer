@@ -127,6 +127,7 @@ def handle_subscription_created(db: Session, stripe_sub: dict):
     if tier_config:
         subscription.plan = tier_config["plan"]
         subscription.monthly_candidate_limit = tier_config["limit"]
+        subscription.candidates_used_this_month = 0  # Reset usage counter for new subscription
         logger.info(f"Mapped price {price_id} to plan {tier_config['plan'].value} with limit {tier_config['limit']}")
     else:
         logger.warning(f"Unknown Stripe price ID: {price_id}")
