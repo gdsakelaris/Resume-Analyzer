@@ -66,6 +66,25 @@ services:
       redis:
         condition: service_healthy
 
+  # pgAdmin - Database Management UI
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: resume-analyzer-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@starscreen.local}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+      PGADMIN_LISTEN_PORT: 5050
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
+    ports:
+      - "5050:5050"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - db
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   redis_data:
+  pgadmin_data:
