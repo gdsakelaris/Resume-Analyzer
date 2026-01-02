@@ -9,6 +9,7 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 from typing import Tuple
 from celery import Task
+from kombu import Connection
 
 logger = logging.getLogger(__name__)
 
@@ -27,18 +28,25 @@ def _queue_task_sync(task: Task, args: tuple, kwargs: dict) -> Tuple[bool, str, 
         Tuple[bool, str, str]: (success, task_id, error_message)
     """
     try:
-        result = task.apply_async(
-            args=args,
-            kwargs=kwargs,
-            retry=True,
-            retry_policy={
-                'max_retries': 3,
-                'interval_start': 0,
-                'interval_step': 0.2,
-                'interval_max': 0.2,
-            }
-        )
-        return (True, result.id, "")
+        # Use a fresh Kombu connection to avoid stale connection pool issues
+        # This is more reliable than using the celery_app's cached connection
+        from app.core.config import settings
+
+        with Connection(settings.REDIS_URL) as conn:
+            # Send task using the fresh connection
+            result = task.apply_async(
+                args=args,
+                kwargs=kwargs,
+                connection=conn,
+                retry=True,
+                retry_policy={
+                    'max_retries': 3,
+                    'interval_start': 0,
+                    'interval_step': 0.2,
+                    'interval_max': 0.2,
+                }
+            )
+            return (True, result.id, "")
     except Exception as e:
         return (False, "", str(e))
 
