@@ -438,9 +438,11 @@ def list_candidates(
         limit = 100
 
     # SECURITY: Filter by tenant_id to prevent cross-tenant access
+    # Also filter out soft-deleted candidates (EEOC/OFCCP retention)
     query = db.query(Candidate).filter(
         Candidate.job_id == job_id,
-        Candidate.tenant_id == tenant_id
+        Candidate.tenant_id == tenant_id,
+        Candidate.is_deleted == False  # Hide soft-deleted candidates
     )
 
     if status:
@@ -619,7 +621,16 @@ def delete_candidate(
     tenant_id: UUIDType = Depends(get_tenant_id)
 ):
     """
-    Delete a candidate and their resume file.
+    Soft delete a candidate (EEOC/OFCCP compliant).
+
+    ⚠️ LEGAL COMPLIANCE: Federal law (EEOC/OFCCP) requires keeping employment
+    records for 1-3 years. This endpoint implements soft delete to comply with
+    record retention requirements.
+
+    - Marks candidate as deleted (not visible in UI)
+    - Retains all data for legal compliance
+    - Files are NOT deleted from storage
+    - Records auto-purge after retention period (configurable)
 
     Args:
         job_id: The job posting ID
@@ -628,11 +639,15 @@ def delete_candidate(
     Raises:
         HTTPException 404: If candidate not found
     """
+    from app.core.config import settings
+    from datetime import datetime, timedelta
+
     # SECURITY: Filter by tenant_id to prevent deletion across tenants
     candidate = db.query(Candidate).filter(
         Candidate.id == candidate_id,
         Candidate.job_id == job_id,
-        Candidate.tenant_id == tenant_id
+        Candidate.tenant_id == tenant_id,
+        Candidate.is_deleted == False  # Only allow deleting non-deleted candidates
     ).first()
 
     if not candidate:
@@ -641,17 +656,35 @@ def delete_candidate(
             detail=f"Candidate {candidate_id} not found for job {job_id}"
         )
 
-    # Delete file from storage (S3 or local)
-    try:
-        storage.delete_file(candidate.file_path)
-        logger.info(f"Deleted resume file from storage: {candidate.file_path}")
-    except Exception as e:
-        logger.error(f"Failed to delete file {candidate.file_path}: {e}")
-        # Continue with database deletion even if file deletion fails
+    # SOFT DELETE: Mark as deleted instead of actually deleting
+    if settings.ENABLE_SOFT_DELETE:
+        candidate.is_deleted = True
+        candidate.deleted_at = datetime.utcnow()
+        # Calculate retention period (3 years by default for OFCCP compliance)
+        candidate.retention_until = datetime.utcnow() + timedelta(days=settings.CANDIDATE_RETENTION_DAYS)
 
-    # Delete database record
-    db.delete(candidate)
-    db.commit()
-    logger.info(f"Deleted candidate {candidate_id}")
+        db.commit()
+        logger.info(
+            f"Soft deleted candidate {candidate_id}. "
+            f"Will be retained until {candidate.retention_until.date()} for legal compliance."
+        )
+    else:
+        # HARD DELETE (not recommended - use only for development/testing)
+        logger.warning(
+            f"Hard delete requested for candidate {candidate_id}. "
+            f"This may violate EEOC/OFCCP record retention requirements!"
+        )
+
+        # Delete file from storage (S3 or local)
+        try:
+            storage.delete_file(candidate.file_path)
+            logger.info(f"Deleted resume file from storage: {candidate.file_path}")
+        except Exception as e:
+            logger.error(f"Failed to delete file {candidate.file_path}: {e}")
+
+        # Delete database record
+        db.delete(candidate)
+        db.commit()
+        logger.info(f"Hard deleted candidate {candidate_id}")
 
     return None

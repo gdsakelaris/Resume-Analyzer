@@ -5,7 +5,7 @@ Represents a job candidate who has submitted a resume for a specific job posting
 Tracks the resume processing pipeline from upload through parsing to scoring.
 """
 
-from sqlalchemy import Column, Integer, String, ForeignKey, Enum, Text, DateTime, func
+from sqlalchemy import Column, Integer, String, ForeignKey, Enum, Text, DateTime, Boolean, func
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 import enum
@@ -72,6 +72,13 @@ class Candidate(Base):
         index=True
     )
     error_message = Column(Text, nullable=True)
+
+    # Soft Delete & Retention Policy (EEOC/OFCCP Compliance)
+    # Federal law requires keeping employment records for 1-3 years
+    is_deleted = Column(Boolean, default=False, nullable=False, index=True)
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
+    deleted_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    retention_until = Column(DateTime(timezone=True), nullable=True)  # Auto-calculated: deleted_at + retention_period
 
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())

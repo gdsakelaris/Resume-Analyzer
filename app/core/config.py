@@ -81,6 +81,12 @@ class Settings(BaseSettings):
     # Free Tier Settings
     FREE_TIER_CANDIDATE_LIMIT: int = 10         # Monthly candidate limit for free tier
 
+    # Retention Policy Settings (EEOC/OFCCP Compliance)
+    # Federal law requires keeping employment records for 1-3 years
+    CANDIDATE_RETENTION_DAYS: int = 1095        # 3 years (conservative for OFCCP compliance)
+    ENABLE_SOFT_DELETE: bool = True             # Use soft delete instead of hard delete
+    AUTO_PURGE_ENABLED: bool = False            # Automatically purge records after retention period
+
     # CORS Settings - can be set as JSON string in .env
     BACKEND_CORS_ORIGINS: Union[List[str], str] = ["http://localhost:3000", "http://localhost:8000"]
 
