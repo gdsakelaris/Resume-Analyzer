@@ -6,10 +6,12 @@ Implements JWT-based stateless authentication:
 - POST /login: Authenticate and receive JWT tokens
 - POST /refresh: Get new access token using refresh token
 - GET /me: Get current user profile
+- DELETE /me: Delete current user account (cancels Stripe subscription)
 """
 
 import logging
 import uuid
+import stripe
 from datetime import datetime
 from fastapi import APIRouter, HTTPException, Depends, status
 from sqlalchemy.orm import Session
@@ -32,6 +34,9 @@ from app.tasks.email_tasks import send_verification_email_task
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 logger = logging.getLogger(__name__)
+
+# Initialize Stripe
+stripe.api_key = settings.STRIPE_API_KEY
 
 
 @router.post("/register", status_code=201, response_model=TokenResponse)
@@ -212,3 +217,58 @@ def get_current_user_profile(
     Requires valid JWT token in Authorization header.
     """
     return current_user
+
+
+@router.delete("/me")
+def delete_current_user(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Delete the current user's account.
+
+    IMPORTANT: This will:
+    1. Cancel any active Stripe subscription (user won't be charged anymore)
+    2. Delete the user account and ALL associated data (jobs, candidates, evaluations)
+    3. This action is IRREVERSIBLE
+
+    Returns a success message.
+    """
+    try:
+        # Get user's subscription
+        subscription = db.query(Subscription).filter(
+            Subscription.user_id == current_user.id
+        ).first()
+
+        # Cancel Stripe subscription if it exists
+        stripe_canceled = False
+        if subscription and subscription.stripe_subscription_id:
+            try:
+                logger.info(f"Canceling Stripe subscription {subscription.stripe_subscription_id} for user {current_user.email}")
+                stripe.Subscription.delete(subscription.stripe_subscription_id)
+                stripe_canceled = True
+                logger.info(f"Stripe subscription canceled successfully")
+            except stripe.error.StripeError as e:
+                logger.error(f"Failed to cancel Stripe subscription: {e}")
+                # Continue with user deletion even if Stripe cancellation fails
+                # User can manually cancel in Stripe dashboard if needed
+
+        # Delete the user (cascade will delete subscription and all related data)
+        user_email = current_user.email
+        db.delete(current_user)
+        db.commit()
+
+        logger.info(f"User account deleted: {user_email} (Stripe canceled: {stripe_canceled})")
+
+        return {
+            "message": "Account deleted successfully",
+            "stripe_subscription_canceled": stripe_canceled
+        }
+
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error deleting user {current_user.email}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete account: {str(e)}"
+        )
