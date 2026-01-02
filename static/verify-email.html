@@ -137,10 +137,15 @@
             </div>
 
             <!-- Help Text -->
-            <div class="mt-6 text-center" x-show="!verified">
-                <a href="/static/login.html" class="text-sm text-slate-600 hover:text-slate-800 transition">
-                    ← Back to Login
-                </a>
+            <div class="mt-6 text-center space-y-2" x-show="!verified">
+                <div>
+                    <button @click="handleLogout" class="text-sm text-slate-600 hover:text-slate-800 transition underline">
+                        Sign out and use different account
+                    </button>
+                </div>
+                <div class="text-xs text-slate-500">
+                    Wrong account? Sign out to register or login with a different email
+                </div>
             </div>
         </div>
 
@@ -252,7 +257,7 @@
                                 // Update user in localStorage
                                 const user = Auth.getUser();
                                 user.is_verified = true;
-                                localStorage.setItem('user', JSON.stringify(user));
+                                localStorage.setItem(Auth.USER_KEY, JSON.stringify(user));
 
                                 // Show success state
                                 this.verified = true;
@@ -349,6 +354,17 @@
                         const mins = Math.floor(seconds / 60);
                         const secs = seconds % 60;
                         return `${mins}:${secs.toString().padStart(2, '0')}`;
+                    },
+
+                    handleLogout() {
+                        if (confirm('Are you sure you want to sign out? You can register or login with a different account.')) {
+                            // Stop timers
+                            if (this.timer) clearInterval(this.timer);
+                            if (this.resendTimer) clearInterval(this.resendTimer);
+
+                            // Logout and redirect
+                            Auth.logout();
+                        }
                     }
                 }
             }
