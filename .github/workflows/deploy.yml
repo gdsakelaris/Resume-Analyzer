@@ -19,4 +19,12 @@ jobs:
         script: |
           cd ~/Resume-Analyzer
           git pull origin main
-          docker-compose restart api
+
+          # Rebuild and restart containers (picks up requirements.txt, Dockerfile changes)
+          docker-compose up -d --build api
+
+          # Run database migrations
+          docker-compose exec -T api alembic upgrade head
+
+          # Show status
+          docker-compose ps
