@@ -99,11 +99,11 @@ class WebhookHandler(BaseHTTPRequestHandler):
         print(f"{self.address_string()} - {format % args}")
 
 
-def run_server(port=8000):
+def run_server(port=9000):
     server_address = ('', port)
     httpd = HTTPServer(server_address, WebhookHandler)
     print(f"Webhook server running on port {port}")
-    print(f"Listening for GitHub webhooks at http://your-server:8000/webhook")
+    print(f"Listening for GitHub webhooks at http://your-server:{port}/webhook")
     httpd.serve_forever()
 
 
