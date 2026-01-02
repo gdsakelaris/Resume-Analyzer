@@ -16,26 +16,26 @@ docker-compose logs api worker --tail 100 | grep -i "redis\|connection"
 
 echo ""
 echo "=== Testing rate limiter directly ==="
-docker-compose exec api python3 << 'PYTHON'
+docker-compose exec -T api python -c "
 import sys
 import traceback
 
 try:
-    print("1. Importing rate_limiter...")
+    print('1. Importing rate_limiter...')
     from app.core.rate_limiter import rate_limiter
-    print("✅ Import successful")
+    print('✅ Import successful')
 
-    print("\n2. Testing rate limiter...")
+    print('\n2. Testing rate limiter...')
     rate_limiter.check_rate_limit('test_key', max_requests=5, window_seconds=60)
-    print("✅ Rate limiter works!")
+    print('✅ Rate limiter works!')
 
-    print("\n3. Cleaning up...")
+    print('\n3. Cleaning up...')
     rate_limiter.reset_limit('test_key')
-    print("✅ Test complete")
+    print('✅ Test complete')
 
 except Exception as e:
-    print(f"\n❌ Error: {e}")
-    print("\nFull traceback:")
+    print(f'\n❌ Error: {e}')
+    print('\nFull traceback:')
     traceback.print_exc()
     sys.exit(1)
-PYTHON
+"

@@ -259,8 +259,12 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
 
-    // If authenticated but not verified, and not on verification page, redirect to verification
-    if (Auth.isAuthenticated() && !Auth.isVerified() && !currentPage.includes('verify-email.html')) {
+    // If authenticated but not verified, and not on verification page or login/register pages, redirect to verification
+    // Allow users to logout and go back to login/register if they want to use a different account
+    const allowedPagesForUnverified = ['verify-email.html', 'login.html', 'register.html'];
+    const isAllowedPage = allowedPagesForUnverified.some(page => currentPage.includes(page));
+
+    if (Auth.isAuthenticated() && !Auth.isVerified() && !isAllowedPage) {
         console.log('[Auth] Unverified user detected, redirecting to verification');
         window.location.href = '/static/verify-email.html';
         return;

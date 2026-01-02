@@ -137,14 +137,18 @@
             </div>
 
             <!-- Help Text -->
-            <div class="mt-6 text-center space-y-2" x-show="!verified">
-                <div>
-                    <button @click="handleLogout" class="text-sm text-slate-600 hover:text-slate-800 transition underline">
-                        Sign out and use different account
+            <div class="mt-6 text-center space-y-3" x-show="!verified">
+                <div class="flex justify-center gap-4">
+                    <a href="/static/login.html" @click.prevent="handleBackToLogin" class="text-sm text-slate-600 hover:text-slate-800 transition underline">
+                        ← Back to Login
+                    </a>
+                    <span class="text-slate-300">|</span>
+                    <button @click="handleLogout" class="text-sm text-red-600 hover:text-red-700 transition underline">
+                        Sign Out
                     </button>
                 </div>
                 <div class="text-xs text-slate-500">
-                    Wrong account? Sign out to register or login with a different email
+                    Wrong account? Sign out to login or register with a different email
                 </div>
             </div>
         </div>
@@ -356,8 +360,20 @@
                         return `${mins}:${secs.toString().padStart(2, '0')}`;
                     },
 
+                    handleBackToLogin() {
+                        // Stop timers
+                        if (this.timer) clearInterval(this.timer);
+                        if (this.resendTimer) clearInterval(this.resendTimer);
+
+                        // Clear auth and redirect to login
+                        localStorage.removeItem(Auth.ACCESS_TOKEN_KEY);
+                        localStorage.removeItem(Auth.REFRESH_TOKEN_KEY);
+                        localStorage.removeItem(Auth.USER_KEY);
+                        window.location.href = '/static/login.html';
+                    },
+
                     handleLogout() {
-                        if (confirm('Are you sure you want to sign out? You can register or login with a different account.')) {
+                        if (confirm('Are you sure you want to sign out? You will need to register or login again.')) {
                             // Stop timers
                             if (this.timer) clearInterval(this.timer);
                             if (this.resendTimer) clearInterval(this.resendTimer);
