@@ -1,4 +1,9 @@
 """
+BACKUP OF ORIGINAL rate_limiter.py - DO NOT USE THIS FILE
+
+This is the original version before the Redis connection fix.
+Kept for reference only.
+
 Redis-based rate limiting for email verification endpoints.
 
 Prevents abuse of send/resend/verify operations.
@@ -9,7 +14,6 @@ from typing import Optional
 from datetime import timedelta
 from fastapi import HTTPException, status
 from app.core.config import settings
-import time
 
 
 class RateLimiter:
@@ -17,64 +21,16 @@ class RateLimiter:
     Redis-based rate limiter for protecting endpoints.
 
     Uses sliding window rate limiting with automatic expiration.
-    Implements lazy connection with retry logic for reliability.
     """
 
     def __init__(self):
-        """Initialize rate limiter with lazy Redis connection"""
-        self._redis_client: Optional[redis.Redis] = None
-        self._connection_attempts = 0
-        self._max_connection_attempts = 5
-        self._retry_delay = 1  # seconds
-
-    @property
-    def redis_client(self) -> redis.Redis:
-        """
-        Lazy Redis connection with retry logic.
-
-        Only connects when first needed and retries if connection fails.
-        Validates existing connection before returning.
-        """
-        # If we have a client, test if it's still alive
-        if self._redis_client is not None:
-            try:
-                self._redis_client.ping()
-                return self._redis_client
-            except (redis.ConnectionError, redis.TimeoutError):
-                # Connection is dead, reconnect
-                print("Redis connection lost, reconnecting...")
-                self._redis_client = None
-
-        # Create new connection with retry logic
-        for attempt in range(1, self._max_connection_attempts + 1):
-            try:
-                self._redis_client = redis.Redis(
-                    host=settings.REDIS_HOST,
-                    port=settings.REDIS_PORT,
-                    db=settings.REDIS_DB,
-                    decode_responses=True,
-                    socket_connect_timeout=5,
-                    socket_timeout=5,
-                    retry_on_timeout=True,
-                    health_check_interval=30
-                )
-                # Test connection
-                self._redis_client.ping()
-                print(f"✅ Redis connection established (attempt {attempt}/{self._max_connection_attempts})")
-                self._connection_attempts = 0
-                return self._redis_client
-            except (redis.ConnectionError, redis.TimeoutError) as e:
-                print(f"❌ Redis connection attempt {attempt}/{self._max_connection_attempts} failed: {e}")
-                if attempt < self._max_connection_attempts:
-                    time.sleep(self._retry_delay)
-                else:
-                    # All attempts failed
-                    raise redis.ConnectionError(
-                        f"Failed to connect to Redis after {self._max_connection_attempts} attempts"
-                    )
-
-        # This should never be reached, but satisfy type checker
-        raise redis.ConnectionError("Unexpected error in Redis connection")
+        """Initialize Redis connection"""
+        self.redis_client = redis.Redis(
+            host=settings.REDIS_HOST,
+            port=settings.REDIS_PORT,
+            db=settings.REDIS_DB,
+            decode_responses=True
+        )
 
     def check_rate_limit(
         self,
