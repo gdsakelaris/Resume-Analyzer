@@ -8,11 +8,13 @@ The worker process will use this configuration to connect to Redis and process t
 from celery import Celery
 from app.core.config import settings
 
-# Create Celery instance
+# Create Celery instance with lazy connection
 celery_app = Celery(
     "resume_analyzer_worker",
     broker=settings.REDIS_URL,
-    backend=settings.REDIS_URL
+    backend=settings.REDIS_URL,
+    # Don't connect at import time
+    broker_connection_retry_on_startup=True
 )
 
 # Configure Celery
@@ -37,6 +39,11 @@ celery_app.conf.update(
     # Worker behavior
     worker_prefetch_multiplier=1,  # Only fetch 1 task at a time
     worker_max_tasks_per_child=50,  # Restart worker after 50 tasks (prevent memory leaks)
+
+    # Connection settings
+    broker_connection_retry=True,
+    broker_connection_retry_on_startup=True,
+    broker_connection_max_retries=10,
 )
 
 # Auto-discover tasks from app.tasks module
