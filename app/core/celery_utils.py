@@ -6,11 +6,41 @@ even when called from FastAPI endpoints.
 """
 
 import logging
-from typing import Any, Dict
+from concurrent.futures import ThreadPoolExecutor
+from typing import Tuple
 from celery import Task
-from app.core.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
+
+# Thread pool for queueing tasks from async contexts
+# This avoids conflicts with FastAPI's uvicorn async event loop
+_executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="celery_queue")
+
+
+def _queue_task_sync(task: Task, args: tuple, kwargs: dict) -> Tuple[bool, str, str]:
+    """
+    Internal function to queue task synchronously in a thread.
+
+    This avoids conflicts with FastAPI's async event loop.
+
+    Returns:
+        Tuple[bool, str, str]: (success, task_id, error_message)
+    """
+    try:
+        result = task.apply_async(
+            args=args,
+            kwargs=kwargs,
+            retry=True,
+            retry_policy={
+                'max_retries': 3,
+                'interval_start': 0,
+                'interval_step': 0.2,
+                'interval_max': 0.2,
+            }
+        )
+        return (True, result.id, "")
+    except Exception as e:
+        return (False, "", str(e))
 
 
 def queue_task_safely(task: Task, *args, **kwargs) -> bool:
@@ -18,8 +48,8 @@ def queue_task_safely(task: Task, *args, **kwargs) -> bool:
     Safely queue a Celery task with connection retry logic.
 
     This function ensures the Celery broker connection is fresh and handles
-    connection errors gracefully. Use this instead of task.delay() when
-    queueing from FastAPI endpoints.
+    connection errors gracefully. Works correctly from both sync and async
+    FastAPI endpoints by running the actual queueing in a thread pool.
 
     Args:
         task: The Celery task to queue
@@ -38,22 +68,15 @@ def queue_task_safely(task: Task, *args, **kwargs) -> bool:
             user_name='John Doe'
         )
     """
-    try:
-        # Use apply_async with retry policy
-        # This is more reliable than delay() in FastAPI contexts
-        result = task.apply_async(
-            args=args,
-            kwargs=kwargs,
-            retry=True,
-            retry_policy={
-                'max_retries': 3,
-                'interval_start': 0,
-                'interval_step': 0.2,
-                'interval_max': 0.2,
-            }
-        )
-        logger.info(f"Task {task.name} queued successfully: {result.id}")
+    # Queue task in a separate thread to avoid async event loop conflicts
+    # This is necessary because FastAPI/uvicorn's async event loop can
+    # interfere with Celery's connection pool management
+    future = _executor.submit(_queue_task_sync, task, args, kwargs)
+    success, task_id, error = future.result(timeout=5)
+
+    if success:
+        logger.info(f"Task {task.name} queued successfully: {task_id}")
         return True
-    except Exception as e:
-        logger.error(f"Failed to queue task {task.name}: {e}")
+    else:
+        logger.error(f"Failed to queue task {task.name}: {error}")
         return False
