@@ -330,8 +330,9 @@
                         </template>
                         <template x-if="currentPlan !== 'Recruiter'">
                             <button @click="selectPlan('starter', billingPeriod)"
-                                class="w-full bg-white text-brand-700 font-semibold py-3 rounded-lg hover:bg-brand-50 transition">
-                                Choose Plan
+                                :disabled="loading"
+                                class="w-full bg-white text-brand-700 font-semibold py-3 rounded-lg hover:bg-brand-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                x-text="loading ? 'Processing...' : (isAuthenticated && currentPlanValue && currentPlanValue !== 'free' ? 'Change Plan' : 'Choose Plan')">
                             </button>
                         </template>
                     </div>
@@ -375,8 +376,9 @@
                         </template>
                         <template x-if="currentPlan !== 'Small Business'">
                             <button @click="selectPlan('small_business', billingPeriod)"
-                                class="w-full bg-brand-600 text-white font-semibold py-3 rounded-lg hover:bg-brand-700 transition">
-                                Choose Plan
+                                :disabled="loading"
+                                class="w-full bg-brand-600 text-white font-semibold py-3 rounded-lg hover:bg-brand-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                x-text="loading ? 'Processing...' : (isAuthenticated && currentPlanValue && currentPlanValue !== 'free' ? 'Change Plan' : 'Choose Plan')">
                             </button>
                         </template>
                     </div>
@@ -420,8 +422,9 @@
                         </template>
                         <template x-if="currentPlan !== 'Enterprise'">
                             <button @click="selectPlan('professional', billingPeriod)"
-                                class="w-full bg-brand-600 text-white font-semibold py-3 rounded-lg hover:bg-brand-700 transition">
-                                Choose Plan
+                                :disabled="loading"
+                                class="w-full bg-brand-600 text-white font-semibold py-3 rounded-lg hover:bg-brand-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                x-text="loading ? 'Processing...' : (isAuthenticated && currentPlanValue && currentPlanValue !== 'free' ? 'Change Plan' : 'Choose Plan')">
                             </button>
                         </template>
                     </div>
@@ -462,6 +465,9 @@
                     billingPeriod: 'monthly',
                     isAuthenticated: false,
                     currentPlan: null,
+                    currentPlanValue: null,  // The API value (e.g., 'starter', 'small_business')
+                    loading: false,
+                    errorMessage: '',
 
                     async init() {
                         this.isAuthenticated = Auth.isAuthenticated();
@@ -478,28 +484,67 @@
                             if (response.ok) {
                                 const data = await response.json();
                                 this.currentPlan = data.plan_display;  // 'Free', 'Recruiter', 'Small Business', 'Professional'
+                                this.currentPlanValue = data.plan;  // 'free', 'starter', 'small_business', 'professional'
                             }
                         } catch (error) {
                             console.error('Failed to fetch subscription:', error);
                         }
                     },
 
-                    selectPlan(tier, period = 'monthly') {
+                    async selectPlan(tier, period = 'monthly') {
                         // Don't allow selecting current plan
                         if (tier.toUpperCase() === this.currentPlan) {
                             return;
                         }
 
-                        if (tier === 'free') {
-                            // Redirect to registration
+                        this.errorMessage = '';
+
+                        // If user is authenticated and has a paid subscription, use upgrade endpoint
+                        if (this.isAuthenticated && this.currentPlanValue && this.currentPlanValue !== 'free') {
+                            await this.upgradePlan(tier);
+                        } else if (tier === 'free') {
+                            // Redirect to registration for free plan
                             window.location.href = '/static/register.html';
                         } else {
-                            // Redirect to checkout with selected plan
+                            // Redirect to checkout for new subscription
                             const params = new URLSearchParams({
                                 plan: tier,
                                 billing: period
                             });
                             window.location.href = `/static/checkout.html?${params.toString()}`;
+                        }
+                    },
+
+                    async upgradePlan(newTier) {
+                        if (this.loading) return;
+
+                        this.loading = true;
+
+                        try {
+                            const response = await Auth.fetch(`/api/v1/subscriptions/upgrade?new_tier=${newTier.toUpperCase()}`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                }
+                            });
+
+                            const data = await response.json();
+
+                            if (!response.ok) {
+                                throw new Error(data.detail || 'Failed to change plan');
+                            }
+
+                            // Show success message
+                            alert(data.message || 'Plan changed successfully!');
+
+                            // Refresh the page to show updated plan
+                            window.location.reload();
+
+                        } catch (error) {
+                            this.errorMessage = error.message || 'Failed to change plan';
+                            alert(this.errorMessage);
+                        } finally {
+                            this.loading = false;
                         }
                     }
                 }
