@@ -234,6 +234,11 @@ async def get_current_subscription(
     if not subscription:
         raise HTTPException(status_code=404, detail="No subscription found")
 
+    # Convert datetime to Unix timestamp (milliseconds) for frontend
+    period_end_timestamp = None
+    if subscription.current_period_end:
+        period_end_timestamp = int(subscription.current_period_end.timestamp() * 1000)
+
     return {
         "plan": subscription.plan.value,
         "plan_display": subscription.plan.display_name,
@@ -242,7 +247,7 @@ async def get_current_subscription(
         "candidates_used_this_month": subscription.candidates_used_this_month,
         "remaining_candidates": subscription.remaining_candidates,
         "usage_percentage": subscription.usage_percentage,
-        "current_period_end": subscription.current_period_end
+        "current_period_end": period_end_timestamp
     }
 
 

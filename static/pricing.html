@@ -107,6 +107,16 @@
                                                             <span x-text="`${subscription.candidates_used_this_month} used`"></span>
                                                             <span x-text="`${subscription.monthly_candidate_limit} total`"></span>
                                                         </div>
+                                                        <template x-if="subscription.usage_percentage < 90 && subscription.current_period_end">
+                                                            <p class="text-xs text-slate-500 mt-2">
+                                                                Resets <span x-text="new Date(subscription.current_period_end).toLocaleDateString()"></span>
+                                                            </p>
+                                                        </template>
+                                                        <template x-if="subscription.usage_percentage >= 90">
+                                                            <p class="text-xs text-red-600 font-medium mt-2">
+                                                                ⚠️ Almost at limit! Consider upgrading.
+                                                            </p>
+                                                        </template>
                                                     </div>
                                                 </template>
 
