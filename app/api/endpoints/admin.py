@@ -7,6 +7,7 @@ In production, implement proper role-based access control (RBAC).
 
 import logging
 from typing import List
+from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -41,7 +42,7 @@ def list_all_users(
 
 @router.delete("/users/{user_id}")
 def delete_user(
-    user_id: int,
+    user_id: UUID,
     db: Session = Depends(get_db),
     admin_user: User = Depends(get_admin_user)
 ):
@@ -81,7 +82,7 @@ def list_all_subscriptions(
 
 @router.delete("/subscriptions/{subscription_id}")
 def delete_subscription(
-    subscription_id: int,
+    subscription_id: UUID,
     db: Session = Depends(get_db),
     admin_user: User = Depends(get_admin_user)
 ):
@@ -98,7 +99,7 @@ def delete_subscription(
 
 @router.post("/subscriptions/{subscription_id}/reset-usage")
 def reset_subscription_usage(
-    subscription_id: int,
+    subscription_id: UUID,
     db: Session = Depends(get_db),
     admin_user: User = Depends(get_admin_user)
 ):
@@ -144,7 +145,7 @@ def list_all_jobs(
 
 @router.delete("/jobs/{job_id}")
 def delete_job(
-    job_id: int,
+    job_id: UUID,
     db: Session = Depends(get_db),
     admin_user: User = Depends(get_admin_user)
 ):
@@ -217,7 +218,7 @@ def list_all_candidates(
 
 @router.delete("/candidates/{candidate_id}")
 def delete_candidate_admin(
-    candidate_id: int,
+    candidate_id: UUID,
     db: Session = Depends(get_db),
     admin_user: User = Depends(get_admin_user)
 ):
@@ -300,7 +301,7 @@ def list_all_evaluations(
 
 @router.delete("/evaluations/{evaluation_id}")
 def delete_evaluation(
-    evaluation_id: int,
+    evaluation_id: UUID,
     db: Session = Depends(get_db),
     admin_user: User = Depends(get_admin_user)
 ):
