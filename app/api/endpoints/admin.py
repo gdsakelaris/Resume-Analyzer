@@ -66,7 +66,7 @@ def list_all_subscriptions(
     db: Session = Depends(get_db),
     admin_user: User = Depends(get_admin_user)
 ):
-    """List all subscriptions in the system."""
+    """List all subscriptions in the system with Stripe details."""
     subscriptions = db.query(Subscription).join(User).all()
     return [{
         "id": str(s.id),
@@ -76,7 +76,9 @@ def list_all_subscriptions(
         "status": s.status.value,
         "candidates_used_this_month": s.candidates_used_this_month,
         "monthly_candidate_limit": s.monthly_candidate_limit,
-        "current_period_end": s.current_period_end
+        "current_period_end": s.current_period_end,
+        "stripe_customer_id": s.stripe_customer_id,  # Stripe customer ID for refunds
+        "stripe_subscription_id": s.stripe_subscription_id  # Stripe subscription ID for manual cancellations
     } for s in subscriptions]
 
 
