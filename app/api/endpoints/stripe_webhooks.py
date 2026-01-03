@@ -103,8 +103,13 @@ def handle_subscription_created(db: Session, stripe_sub: dict):
     # Update subscription with Stripe details
     subscription.stripe_subscription_id = stripe_subscription_id
     subscription.status = SubscriptionStatus(stripe_sub["status"])
-    subscription.current_period_start = stripe_sub.get("current_period_start")
-    subscription.current_period_end = stripe_sub.get("current_period_end")
+
+    # Convert Unix timestamps to datetime objects
+    from datetime import datetime
+    if stripe_sub.get("current_period_start"):
+        subscription.current_period_start = datetime.fromtimestamp(stripe_sub["current_period_start"])
+    if stripe_sub.get("current_period_end"):
+        subscription.current_period_end = datetime.fromtimestamp(stripe_sub["current_period_end"])
 
     # Map Stripe price ID to plan and limits (same as subscriptions.py)
     price_id = stripe_sub["items"]["data"][0]["price"]["id"]
@@ -150,8 +155,13 @@ def handle_subscription_updated(db: Session, stripe_sub: dict):
 
     # Update subscription status
     subscription.status = SubscriptionStatus(stripe_sub["status"])
-    subscription.current_period_start = stripe_sub.get("current_period_start")
-    subscription.current_period_end = stripe_sub.get("current_period_end")
+
+    # Convert Unix timestamps to datetime objects
+    from datetime import datetime
+    if stripe_sub.get("current_period_start"):
+        subscription.current_period_start = datetime.fromtimestamp(stripe_sub["current_period_start"])
+    if stripe_sub.get("current_period_end"):
+        subscription.current_period_end = datetime.fromtimestamp(stripe_sub["current_period_end"])
 
     # Check for plan changes (use same tier mapping as subscription creation)
     price_id = stripe_sub["items"]["data"][0]["price"]["id"]
