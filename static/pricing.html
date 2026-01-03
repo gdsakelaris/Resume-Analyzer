@@ -430,6 +430,98 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Confirmation Modal -->
+            <div x-show="showConfirmModal"
+                 x-cloak
+                 class="fixed inset-0 z-50 overflow-y-auto"
+                 @keydown.escape="cancelPlanChange()">
+                <!-- Backdrop -->
+                <div class="fixed inset-0 bg-slate-900 bg-opacity-75 transition-opacity"
+                     @click="cancelPlanChange()"></div>
+
+                <!-- Modal -->
+                <div class="flex min-h-full items-center justify-center p-4">
+                    <div class="relative bg-white rounded-2xl shadow-2xl max-w-lg w-full p-8 transform transition-all"
+                         @click.away="cancelPlanChange()">
+                        <!-- Close button -->
+                        <button @click="cancelPlanChange()"
+                                class="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+
+                        <!-- Content -->
+                        <div class="text-center">
+                            <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-brand-100 mb-4">
+                                <svg class="h-8 w-8 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
+                                </svg>
+                            </div>
+
+                            <h3 class="text-2xl font-bold text-slate-900 mb-2">Change Your Plan</h3>
+
+                            <template x-if="pendingPlanChange">
+                                <div class="mt-6 space-y-4">
+                                    <!-- From/To -->
+                                    <div class="bg-slate-50 rounded-lg p-6 space-y-4">
+                                        <div class="flex items-center justify-between">
+                                            <div class="text-left">
+                                                <p class="text-sm text-slate-500 mb-1">Current Plan</p>
+                                                <p class="text-lg font-bold text-slate-900" x-text="currentPlan"></p>
+                                                <p class="text-sm text-slate-600" x-text="getPlanPrice(currentPlanValue) + '/month'"></p>
+                                            </div>
+                                            <svg class="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path>
+                                            </svg>
+                                            <div class="text-right">
+                                                <p class="text-sm text-slate-500 mb-1">New Plan</p>
+                                                <p class="text-lg font-bold text-brand-600" x-text="getPlanDisplayName(pendingPlanChange.tier)"></p>
+                                                <p class="text-sm text-slate-600" x-text="getPlanPrice(pendingPlanChange.tier) + '/month'"></p>
+                                            </div>
+                                        </div>
+
+                                        <!-- What changes -->
+                                        <div class="border-t border-slate-200 pt-4">
+                                            <p class="text-sm text-slate-600">
+                                                <span class="font-semibold">Monthly candidate limit: </span>
+                                                <span x-text="getPlanLimit(pendingPlanChange.tier)"></span> candidates
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <!-- Important note -->
+                                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                        <p class="text-sm text-blue-800">
+                                            <template x-if="pendingPlanChange && getPlanPrice(pendingPlanChange.tier) > getPlanPrice(currentPlanValue)">
+                                                <span><strong>Upgrade:</strong> You'll be charged a prorated amount and get immediate access to higher limits.</span>
+                                            </template>
+                                            <template x-if="pendingPlanChange && getPlanPrice(pendingPlanChange.tier) < getPlanPrice(currentPlanValue)">
+                                                <span><strong>Downgrade:</strong> Your plan will change at the end of your current billing period. You'll keep your current benefits until then.</span>
+                                            </template>
+                                        </p>
+                                    </div>
+                                </div>
+                            </template>
+
+                            <!-- Buttons -->
+                            <div class="mt-8 flex gap-3">
+                                <button @click="cancelPlanChange()"
+                                        class="flex-1 px-6 py-3 border-2 border-slate-300 text-slate-700 font-semibold rounded-lg hover:bg-slate-50 transition">
+                                    Cancel
+                                </button>
+                                <button @click="confirmPlanChange()"
+                                        :disabled="loading"
+                                        class="flex-1 px-6 py-3 bg-brand-600 text-white font-semibold rounded-lg hover:bg-brand-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                                    <span x-show="!loading">Confirm Change</span>
+                                    <span x-show="loading">Processing...</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <script>
@@ -468,6 +560,8 @@
                     currentPlanValue: null,  // The API value (e.g., 'starter', 'small_business')
                     loading: false,
                     errorMessage: '',
+                    showConfirmModal: false,
+                    pendingPlanChange: null,
 
                     async init() {
                         this.isAuthenticated = Auth.isAuthenticated();
@@ -491,6 +585,36 @@
                         }
                     },
 
+                    getPlanDisplayName(tier) {
+                        const names = {
+                            'starter': 'Recruiter',
+                            'small_business': 'Small Business',
+                            'professional': 'Enterprise',
+                            'free': 'Free'
+                        };
+                        return names[tier] || tier;
+                    },
+
+                    getPlanPrice(tier) {
+                        const prices = {
+                            'starter': '$20',
+                            'small_business': '$149',
+                            'professional': '$499',
+                            'free': '$0'
+                        };
+                        return prices[tier] || '$0';
+                    },
+
+                    getPlanLimit(tier) {
+                        const limits = {
+                            'starter': '100',
+                            'small_business': '1,000',
+                            'professional': '5,000',
+                            'free': '10'
+                        };
+                        return limits[tier] || '0';
+                    },
+
                     async selectPlan(tier, period = 'monthly') {
                         // Don't allow selecting current plan
                         if (tier.toUpperCase() === this.currentPlan) {
@@ -499,9 +623,10 @@
 
                         this.errorMessage = '';
 
-                        // If user is authenticated and has a paid subscription, use upgrade endpoint
+                        // If user is authenticated and has a paid subscription, show confirmation modal
                         if (this.isAuthenticated && this.currentPlanValue && this.currentPlanValue !== 'free') {
-                            await this.upgradePlan(tier);
+                            this.pendingPlanChange = { tier, period };
+                            this.showConfirmModal = true;
                         } else if (tier === 'free') {
                             // Redirect to registration for free plan
                             window.location.href = '/static/register.html';
@@ -513,6 +638,18 @@
                             });
                             window.location.href = `/static/checkout.html?${params.toString()}`;
                         }
+                    },
+
+                    confirmPlanChange() {
+                        if (this.pendingPlanChange) {
+                            this.showConfirmModal = false;
+                            this.upgradePlan(this.pendingPlanChange.tier);
+                        }
+                    },
+
+                    cancelPlanChange() {
+                        this.showConfirmModal = false;
+                        this.pendingPlanChange = null;
                     },
 
                     async upgradePlan(newTier) {
@@ -534,7 +671,7 @@
                                 throw new Error(data.detail || 'Failed to change plan');
                             }
 
-                            // Show success message
+                            // Show success message (keep using alert for now, or create a success modal)
                             alert(data.message || 'Plan changed successfully!');
 
                             // Refresh the page to show updated plan
