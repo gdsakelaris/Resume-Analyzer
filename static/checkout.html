@@ -452,7 +452,7 @@
                                 // The API now returns plan_display directly, but keep fallback for backwards compatibility
                                 const planDisplayNames = {
                                     'free': 'Free',
-                                    'starter': 'Recruiter',
+                                    'recruiter': 'Recruiter',
                                     'small_business': 'Small Business',
                                     'professional': 'Enterprise',
                                     'enterprise': 'Enterprise'
@@ -548,7 +548,7 @@
 
                         // Parse URL parameters
                         const params = new URLSearchParams(window.location.search);
-                        this.planTier = params.get('plan') || 'starter';
+                        this.planTier = params.get('plan') || 'recruiter';
                         this.billingPeriod = params.get('billing') || 'monthly';
 
                         // Set plan details
@@ -565,7 +565,7 @@
 
                     setPlanDetails() {
                         const plans = {
-                            starter: {
+                            recruiter: {
                                 name: 'Recruiter Plan',
                                 price_monthly: '$20',
                                 price_annual: '$16',

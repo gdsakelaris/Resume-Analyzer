@@ -115,7 +115,7 @@ def handle_subscription_created(db: Session, stripe_sub: dict):
     price_id = stripe_sub["items"]["data"][0]["price"]["id"]
     tier_mapping = {
         settings.STRIPE_PRICE_ID_RECRUITER_MONTHLY: {
-            "plan": SubscriptionPlan.STARTER,
+            "plan": SubscriptionPlan.RECRUITER,
             "limit": 100
         },
         settings.STRIPE_PRICE_ID_SMALL_BUSINESS_MONTHLY: {
@@ -167,7 +167,7 @@ def handle_subscription_updated(db: Session, stripe_sub: dict):
     price_id = stripe_sub["items"]["data"][0]["price"]["id"]
     tier_mapping = {
         settings.STRIPE_PRICE_ID_RECRUITER_MONTHLY: {
-            "plan": SubscriptionPlan.STARTER,
+            "plan": SubscriptionPlan.RECRUITER,
             "limit": 100
         },
         settings.STRIPE_PRICE_ID_SMALL_BUSINESS_MONTHLY: {

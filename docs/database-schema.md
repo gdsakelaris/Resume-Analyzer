@@ -582,13 +582,13 @@ PostgreSQL custom enum types created by Alembic migrations.
 
 ### subscriptionplan Enum
 
-**Values**: `'free'`, `'starter'`, `'small_business'`, `'professional'`, `'enterprise'`
+**Values**: `'free'`, `'recruiter'`, `'small_business'`, `'professional'`, `'enterprise'`
 
 **SQL Definition**:
 ```sql
 CREATE TYPE subscriptionplan AS ENUM (
     'free',
-    'starter',
+    'recruiter',
     'small_business',
     'professional',
     'enterprise'
@@ -599,7 +599,7 @@ CREATE TYPE subscriptionplan AS ENUM (
 ```python
 class SubscriptionPlan(str, enum.Enum):
     FREE = "free"
-    STARTER = "starter"
+    RECRUITER = "recruiter"
     SMALL_BUSINESS = "small_business"
     PROFESSIONAL = "professional"
     ENTERPRISE = "enterprise"

@@ -46,7 +46,7 @@ class SubscriptionPlan(str, enum.Enum):
     ENTERPRISE: Reserved for future custom enterprise solutions
     """
     FREE = "free"
-    STARTER = "starter"
+    RECRUITER = "recruiter"
     SMALL_BUSINESS = "small_business"
     PROFESSIONAL = "professional"
     ENTERPRISE = "enterprise"
@@ -56,7 +56,7 @@ class SubscriptionPlan(str, enum.Enum):
         """Get the user-facing display name for this plan."""
         names = {
             SubscriptionPlan.FREE: "Free",
-            SubscriptionPlan.STARTER: "Recruiter",
+            SubscriptionPlan.RECRUITER: "Recruiter",
             SubscriptionPlan.SMALL_BUSINESS: "Small Business",
             SubscriptionPlan.PROFESSIONAL: "Enterprise",
             SubscriptionPlan.ENTERPRISE: "Enterprise"
@@ -70,7 +70,7 @@ class SubscriptionPlan(str, enum.Enum):
 
         limits = {
             SubscriptionPlan.FREE: settings.FREE_TIER_CANDIDATE_LIMIT,
-            SubscriptionPlan.STARTER: 100,
+            SubscriptionPlan.RECRUITER: 100,
             SubscriptionPlan.SMALL_BUSINESS: 1000,
             SubscriptionPlan.PROFESSIONAL: 5000,  # Enterprise tier with fixed limit
             SubscriptionPlan.ENTERPRISE: 5000  # Reserved for future use
@@ -82,7 +82,7 @@ class SubscriptionPlan(str, enum.Enum):
         """Get the monthly base price in USD for this plan."""
         prices = {
             SubscriptionPlan.FREE: 0,
-            SubscriptionPlan.STARTER: 20,
+            SubscriptionPlan.RECRUITER: 20,
             SubscriptionPlan.SMALL_BUSINESS: 149,
             SubscriptionPlan.PROFESSIONAL: 499,  # Enterprise tier pricing
             SubscriptionPlan.ENTERPRISE: 499  # Reserved for future use

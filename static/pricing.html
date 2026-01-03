@@ -349,7 +349,7 @@
                             </div>
                         </template>
                         <template x-if="currentPlan !== 'Recruiter'">
-                            <button @click="selectPlan('starter', billingPeriod)"
+                            <button @click="selectPlan('recruiter', billingPeriod)"
                                 :disabled="loading"
                                 class="w-full bg-white text-brand-700 font-semibold py-3 rounded-lg hover:bg-brand-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
                                 x-text="loading ? 'Processing...' : (isAuthenticated && currentPlanValue && currentPlanValue !== 'free' ? 'Change Plan' : 'Choose Plan')">
@@ -628,7 +628,7 @@
                                 // The API now returns plan_display directly, but keep fallback for backwards compatibility
                                 const planDisplayNames = {
                                     'free': 'Free',
-                                    'starter': 'Recruiter',
+                                    'recruiter': 'Recruiter',
                                     'small_business': 'Small Business',
                                     'professional': 'Enterprise',
                                     'enterprise': 'Enterprise'
@@ -691,7 +691,7 @@
                     billingPeriod: 'monthly',
                     isAuthenticated: false,
                     currentPlan: null,
-                    currentPlanValue: null,  // The API value (e.g., 'starter', 'small_business')
+                    currentPlanValue: null,  // The API value (e.g., 'recruiter', 'small_business')
                     loading: false,
                     errorMessage: '',
                     showConfirmModal: false,
@@ -712,7 +712,7 @@
                             if (response.ok) {
                                 const data = await response.json();
                                 this.currentPlan = data.plan_display;  // 'Free', 'Recruiter', 'Small Business', 'Enterprise'
-                                this.currentPlanValue = data.plan;  // 'free', 'starter', 'small_business', 'professional'
+                                this.currentPlanValue = data.plan;  // 'free', 'recruiter', 'small_business', 'professional'
                             }
                         } catch (error) {
                             console.error('Failed to fetch subscription:', error);
@@ -721,7 +721,7 @@
 
                     getPlanDisplayName(tier) {
                         const names = {
-                            'starter': 'Recruiter',
+                            'recruiter': 'Recruiter',
                             'small_business': 'Small Business',
                             'professional': 'Enterprise',
                             'free': 'Free'
@@ -731,7 +731,7 @@
 
                     getPlanPrice(tier) {
                         const prices = {
-                            'starter': 20,
+                            'recruiter': 20,
                             'small_business': 149,
                             'professional': 499,
                             'free': 0
@@ -746,7 +746,7 @@
 
                     getPlanLimit(tier) {
                         const limits = {
-                            'starter': '100',
+                            'recruiter': '100',
                             'small_business': '1,000',
                             'professional': '5,000',
                             'free': '10'

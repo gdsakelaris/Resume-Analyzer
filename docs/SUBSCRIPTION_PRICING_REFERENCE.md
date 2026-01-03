@@ -29,7 +29,7 @@ This is the **authoritative source** for all pricing information. All code, docu
 ```python
 class SubscriptionPlan(str, enum.Enum):
     FREE = "free"
-    STARTER = "starter"
+    RECRUITER = "recruiter"
     SMALL_BUSINESS = "small_business"
     PROFESSIONAL = "professional"
     ENTERPRISE = "enterprise"

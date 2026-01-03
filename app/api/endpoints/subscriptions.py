@@ -93,10 +93,10 @@ async def create_subscription(
 
         # Map tier to Stripe price ID and limits
         tier_mapping = {
-            "STARTER": {
+            "RECRUITER": {
                 "price_id": settings.STRIPE_PRICE_ID_RECRUITER_MONTHLY,
                 "limit": 100,
-                "plan": SubscriptionPlan.STARTER
+                "plan": SubscriptionPlan.RECRUITER
             },
             "SMALL_BUSINESS": {
                 "price_id": settings.STRIPE_PRICE_ID_SMALL_BUSINESS_MONTHLY,
@@ -343,10 +343,10 @@ async def upgrade_subscription(
 
     # Map tier to price ID, plan, and limits
     tier_mapping = {
-        "STARTER": {
+        "RECRUITER": {
             "price_id": settings.STRIPE_PRICE_ID_RECRUITER_MONTHLY,
             "limit": 100,
-            "plan": SubscriptionPlan.STARTER
+            "plan": SubscriptionPlan.RECRUITER
         },
         "SMALL_BUSINESS": {
             "price_id": settings.STRIPE_PRICE_ID_SMALL_BUSINESS_MONTHLY,
