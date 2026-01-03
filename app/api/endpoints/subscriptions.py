@@ -336,36 +336,74 @@ async def upgrade_subscription(
     if not subscription or not subscription.stripe_subscription_id:
         raise HTTPException(status_code=404, detail="No active subscription found")
 
-    # Map tier to price ID
+    # Map tier to price ID, plan, and limits
     tier_mapping = {
-        "STARTER": settings.STRIPE_PRICE_ID_RECRUITER_MONTHLY,
-        "SMALL_BUSINESS": settings.STRIPE_PRICE_ID_SMALL_BUSINESS_MONTHLY,
-        "PROFESSIONAL": settings.STRIPE_PRICE_ID_ENTERPRISE_MONTHLY
+        "STARTER": {
+            "price_id": settings.STRIPE_PRICE_ID_RECRUITER_MONTHLY,
+            "limit": 100,
+            "plan": SubscriptionPlan.STARTER
+        },
+        "SMALL_BUSINESS": {
+            "price_id": settings.STRIPE_PRICE_ID_SMALL_BUSINESS_MONTHLY,
+            "limit": 1000,
+            "plan": SubscriptionPlan.SMALL_BUSINESS
+        },
+        "PROFESSIONAL": {
+            "price_id": settings.STRIPE_PRICE_ID_ENTERPRISE_MONTHLY,
+            "limit": 5000,
+            "plan": SubscriptionPlan.PROFESSIONAL
+        }
     }
 
-    new_price_id = tier_mapping.get(new_tier.upper())
-    if not new_price_id:
+    tier_config = tier_mapping.get(new_tier.upper())
+    if not tier_config:
         raise HTTPException(status_code=400, detail=f"Invalid tier: {new_tier}")
+
+    # Check if user is trying to "upgrade" to the same tier
+    if subscription.plan == tier_config["plan"]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"You are already on the {new_tier} plan"
+        )
+
+    # Validate downgrade doesn't exceed current usage
+    if tier_config["limit"] < subscription.candidates_used_this_month:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot downgrade to {new_tier}. You've already used {subscription.candidates_used_this_month} candidates this month, which exceeds the {tier_config['limit']} limit of the {new_tier} plan. Please wait until the next billing period."
+        )
 
     try:
         # Get current subscription from Stripe
         stripe_sub = stripe.Subscription.retrieve(subscription.stripe_subscription_id)
 
         # Update subscription item with new price
-        stripe.Subscription.modify(
+        updated_stripe_sub = stripe.Subscription.modify(
             subscription.stripe_subscription_id,
             items=[{
                 'id': stripe_sub['items']['data'][0].id,
-                'price': new_price_id,
+                'price': tier_config['price_id'],
             }],
             proration_behavior='always_invoice',
         )
 
-        logger.info(f"Upgraded subscription for user {current_user.id} to {new_tier}")
+        # Update local database with new plan and limits
+        subscription.plan = tier_config['plan']
+        subscription.monthly_candidate_limit = tier_config['limit']
+        subscription.current_period_start = datetime.fromtimestamp(updated_stripe_sub.current_period_start)
+        subscription.current_period_end = datetime.fromtimestamp(updated_stripe_sub.current_period_end)
+
+        db.commit()
+        db.refresh(subscription)
+
+        logger.info(f"Upgraded subscription for user {current_user.id} to {new_tier} (limit: {tier_config['limit']})")
 
         return {
-            "message": f"Successfully upgraded to {new_tier}",
-            "status": "active"
+            "message": f"Successfully changed to {new_tier} plan",
+            "status": "active",
+            "plan": subscription.plan.value,
+            "monthly_candidate_limit": subscription.monthly_candidate_limit,
+            "candidates_used_this_month": subscription.candidates_used_this_month
         }
 
     except stripe.error.StripeError as e:
