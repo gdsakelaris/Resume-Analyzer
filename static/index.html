@@ -1343,38 +1343,35 @@
         <script>
             const API_BASE = '/api/v1';
 
-            // Global modal state management
-            let modalState = null;
+            // Global modal state management - Initialize immediately
+            let modalState = {
+                deleteAccountModal: {
+                    show: false,
+                    step: 1,
+                    confirmText: '',
+                    error: '',
+                    loading: false
+                },
+                cancelSubModal: {
+                    show: false,
+                    message: '',
+                    planDisplay: '',
+                    loading: false
+                },
+                toast: {
+                    show: false,
+                    type: 'success',
+                    title: '',
+                    message: ''
+                }
+            };
 
             /**
              * Confirmation Modals Component
              */
             function confirmationModals() {
-                const state = {
-                    deleteAccountModal: {
-                        show: false,
-                        step: 1,
-                        confirmText: '',
-                        error: '',
-                        loading: false
-                    },
-                    cancelSubModal: {
-                        show: false,
-                        message: '',
-                        planDisplay: '',
-                        loading: false
-                    },
-                    toast: {
-                        show: false,
-                        type: 'success',
-                        title: '',
-                        message: ''
-                    }
-                };
-
-                // Store reference globally so other functions can access it
-                modalState = state;
-                return state;
+                // Return the already-initialized global state
+                return modalState;
             }
 
             /**

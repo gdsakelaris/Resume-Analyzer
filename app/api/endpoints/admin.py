@@ -307,14 +307,21 @@ def list_all_evaluations(
     db: Session = Depends(get_db),
     admin_user: User = Depends(get_admin_user)
 ):
-    """List all evaluations across all tenants."""
-    evaluations = db.query(Evaluation).all()
+    """List all evaluations across all tenants with candidate details."""
+    # Join Evaluation with Candidate to get candidate details
+    evaluations = db.query(Evaluation, Candidate).join(
+        Candidate, Evaluation.candidate_id == Candidate.id
+    ).all()
+
     return [{
-        "id": e.id,
-        "candidate_id": e.candidate_id,
-        "tenant_id": str(e.tenant_id),
-        "match_score": e.match_score,
-        "created_at": e.created_at
+        "id": e.Evaluation.id,
+        "candidate_id": e.Evaluation.candidate_id,
+        "candidate_filename": e.Candidate.original_filename,
+        "candidate_email": e.Candidate.email,
+        "job_id": e.Candidate.job_id,
+        "tenant_id": str(e.Evaluation.tenant_id),
+        "match_score": e.Evaluation.match_score,
+        "created_at": e.Evaluation.created_at
     } for e in evaluations]
 
 
