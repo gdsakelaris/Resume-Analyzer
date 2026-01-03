@@ -443,25 +443,55 @@
                     },
 
                     async createSubscription(paymentMethodId) {
-                        const response = await Auth.fetch('/api/v1/subscriptions/create', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({
-                                tier: this.planTier.toUpperCase(),
-                                billing_period: this.billingPeriod,
-                                payment_method_id: paymentMethodId
-                            })
-                        });
-
-                        const data = await response.json();
-
-                        if (!response.ok) {
-                            throw new Error(data.detail || 'Subscription creation failed');
+                        // Check if user already has a paid subscription
+                        let currentSubscription = null;
+                        try {
+                            const subResponse = await Auth.fetch('/api/v1/subscriptions/current');
+                            if (subResponse.ok) {
+                                currentSubscription = await subResponse.json();
+                            }
+                        } catch (e) {
+                            console.log('No existing subscription found');
                         }
 
-                        return data;
+                        // If user has a paid subscription (not FREE), use upgrade endpoint
+                        if (currentSubscription && currentSubscription.plan !== 'free') {
+                            const response = await Auth.fetch(`/api/v1/subscriptions/upgrade?new_tier=${this.planTier.toUpperCase()}`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                }
+                            });
+
+                            const data = await response.json();
+
+                            if (!response.ok) {
+                                throw new Error(data.detail || 'Subscription upgrade failed');
+                            }
+
+                            return data;
+                        } else {
+                            // New subscription or upgrade from FREE
+                            const response = await Auth.fetch('/api/v1/subscriptions/create', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({
+                                    tier: this.planTier.toUpperCase(),
+                                    billing_period: this.billingPeriod,
+                                    payment_method_id: paymentMethodId
+                                })
+                            });
+
+                            const data = await response.json();
+
+                            if (!response.ok) {
+                                throw new Error(data.detail || 'Subscription creation failed');
+                            }
+
+                            return data;
+                        }
                     }
                 }
             }
