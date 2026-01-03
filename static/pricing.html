@@ -577,7 +577,7 @@
                             const response = await Auth.fetch('/api/v1/subscriptions/current');
                             if (response.ok) {
                                 const data = await response.json();
-                                this.currentPlan = data.plan_display;  // 'Free', 'Recruiter', 'Small Business', 'Professional'
+                                this.currentPlan = data.plan_display;  // 'Free', 'Recruiter', 'Small Business', 'Enterprise'
                                 this.currentPlanValue = data.plan;  // 'free', 'starter', 'small_business', 'professional'
                             }
                         } catch (error) {

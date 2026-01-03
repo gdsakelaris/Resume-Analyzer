@@ -182,9 +182,21 @@ def handle_subscription_updated(db: Session, stripe_sub: dict):
 
     tier_config = tier_mapping.get(price_id)
     if tier_config:
-        subscription.plan = tier_config["plan"]
-        subscription.monthly_candidate_limit = tier_config["limit"]
-        logger.info(f"Updated to plan {tier_config['plan'].value} with limit {tier_config['limit']}")
+        # Check if this is a new billing period (renewal or immediate upgrade)
+        # Only update plan if we're in a new billing period OR if current period just started
+        current_time = datetime.now()
+        period_start = datetime.fromtimestamp(stripe_sub["current_period_start"])
+
+        # If period just started (within last hour) OR this is a brand new subscription, update immediately
+        # Otherwise, this might be a scheduled downgrade - don't update until period renews
+        time_since_period_start = (current_time - period_start).total_seconds()
+
+        if time_since_period_start < 3600 or not subscription.plan:  # Within 1 hour of period start
+            subscription.plan = tier_config["plan"]
+            subscription.monthly_candidate_limit = tier_config["limit"]
+            logger.info(f"Updated to plan {tier_config['plan'].value} with limit {tier_config['limit']}")
+        else:
+            logger.info(f"Scheduled plan change detected - will apply at next period. Stripe price: {price_id}, keeping current plan: {subscription.plan.value}")
     else:
         logger.warning(f"Unknown Stripe price ID during update: {price_id}")
 
