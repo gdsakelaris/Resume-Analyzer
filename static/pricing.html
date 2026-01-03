@@ -46,7 +46,7 @@
                             <img src="/images/Logo.png" alt="Starscreen Logo" class="w-10 h-10">
                             <span class="font-bold text-xl tracking-tight text-slate-800">Starscreen</span>
                         </a>
-                        <div class="flex items-center gap-3" x-data="{ menuOpen: false, subscription: null }" x-init="if (isAuthenticated) fetch('/api/v1/subscriptions/me', { headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }}).then(r => r.json()).then(d => subscription = d).catch(() => {})">
+                        <div class="flex items-center gap-3" x-data="{ menuOpen: false, subscription: null }" x-init="if (isAuthenticated) fetch('/api/v1/subscriptions/current', { headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }}).then(r => r.json()).then(d => subscription = d).catch(() => {})">
                             <span class="text-sm text-slate-500 bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
                                 v1.0 • Connected
                             </span>
@@ -255,12 +255,12 @@
                             </li>
                         </ul>
 
-                        <template x-if="currentPlan === 'FREE'">
+                        <template x-if="currentPlan === 'Free'">
                             <div class="bg-slate-400 text-white font-bold py-3 rounded-lg text-center">
                                 Current Plan
                             </div>
                         </template>
-                        <template x-if="currentPlan !== 'FREE'">
+                        <template x-if="currentPlan !== 'Free'">
                             <button @click="selectPlan('free')"
                                 class="w-full bg-slate-100 text-slate-700 font-semibold py-3 rounded-lg hover:bg-slate-200 transition">
                                 Get Started
@@ -313,12 +313,12 @@
                             </li>
                         </ul>
 
-                        <template x-if="currentPlan === 'STARTER'">
+                        <template x-if="currentPlan === 'Recruiter'">
                             <div class="bg-yellow-400 text-slate-900 font-bold py-3 rounded-lg text-center">
                                 Current Plan
                             </div>
                         </template>
-                        <template x-if="currentPlan !== 'STARTER'">
+                        <template x-if="currentPlan !== 'Recruiter'">
                             <button @click="selectPlan('starter', billingPeriod)"
                                 class="w-full bg-white text-brand-700 font-semibold py-3 rounded-lg hover:bg-brand-50 transition">
                                 Choose Plan
@@ -358,12 +358,12 @@
                             </li>
                         </ul>
 
-                        <template x-if="currentPlan === 'SMALL_BUSINESS'">
+                        <template x-if="currentPlan === 'Small Business'">
                             <div class="bg-slate-400 text-white font-bold py-3 rounded-lg text-center">
                                 Current Plan
                             </div>
                         </template>
-                        <template x-if="currentPlan !== 'SMALL_BUSINESS'">
+                        <template x-if="currentPlan !== 'Small Business'">
                             <button @click="selectPlan('small_business', billingPeriod)"
                                 class="w-full bg-brand-600 text-white font-semibold py-3 rounded-lg hover:bg-brand-700 transition">
                                 Choose Plan
@@ -403,12 +403,12 @@
                             </li>
                         </ul>
 
-                        <template x-if="currentPlan === 'PROFESSIONAL'">
+                        <template x-if="currentPlan === 'Enterprise'">
                             <div class="bg-slate-400 text-white font-bold py-3 rounded-lg text-center">
                                 Current Plan
                             </div>
                         </template>
-                        <template x-if="currentPlan !== 'PROFESSIONAL'">
+                        <template x-if="currentPlan !== 'Enterprise'">
                             <button @click="selectPlan('professional', billingPeriod)"
                                 class="w-full bg-brand-600 text-white font-semibold py-3 rounded-lg hover:bg-brand-700 transition">
                                 Choose Plan
@@ -440,7 +440,7 @@
                             const response = await Auth.fetch('/api/v1/subscriptions/current');
                             if (response.ok) {
                                 const data = await response.json();
-                                this.currentPlan = data.plan;  // 'FREE', 'STARTER', 'SMALL_BUSINESS', 'PROFESSIONAL'
+                                this.currentPlan = data.plan_display;  // 'Free', 'Recruiter', 'Small Business', 'Professional'
                             }
                         } catch (error) {
                             console.error('Failed to fetch subscription:', error);

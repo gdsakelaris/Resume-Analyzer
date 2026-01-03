@@ -1346,17 +1346,18 @@
                                 const data = await response.json();
 
                                 // Add display name based on plan
+                                // The API now returns plan_display directly, but keep fallback for backwards compatibility
                                 const planDisplayNames = {
                                     'free': 'Free',
                                     'starter': 'Recruiter',
                                     'small_business': 'Small Business',
-                                    'professional': 'Professional',
+                                    'professional': 'Enterprise',
                                     'enterprise': 'Enterprise'
                                 };
 
                                 this.subscription = {
                                     ...data,
-                                    plan_display: planDisplayNames[data.plan] || data.plan.toUpperCase()
+                                    plan_display: data.plan_display || planDisplayNames[data.plan] || data.plan.toUpperCase()
                                 };
 
                                 console.log('Subscription loaded:', this.subscription);

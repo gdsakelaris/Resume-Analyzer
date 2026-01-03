@@ -58,7 +58,7 @@ class SubscriptionPlan(str, enum.Enum):
             SubscriptionPlan.FREE: "Free",
             SubscriptionPlan.STARTER: "Recruiter",
             SubscriptionPlan.SMALL_BUSINESS: "Small Business",
-            SubscriptionPlan.PROFESSIONAL: "Professional",
+            SubscriptionPlan.PROFESSIONAL: "Enterprise",
             SubscriptionPlan.ENTERPRISE: "Enterprise"
         }
         return names.get(self, "Unknown")

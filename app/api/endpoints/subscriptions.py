@@ -35,6 +35,7 @@ class CreateSubscriptionRequest(BaseModel):
 class SubscriptionResponse(BaseModel):
     """Response model for subscription info"""
     plan: str
+    plan_display: str
     status: str
     monthly_candidate_limit: int
     candidates_used_this_month: int
@@ -234,6 +235,7 @@ async def get_current_subscription(
 
     return {
         "plan": subscription.plan.value,
+        "plan_display": subscription.plan.display_name,
         "status": subscription.status.value,
         "monthly_candidate_limit": subscription.monthly_candidate_limit,
         "candidates_used_this_month": subscription.candidates_used_this_month,
