@@ -222,7 +222,7 @@
 **Cost Analysis** (GPT-4o):
 - Resume scoring: ~2,000 tokens input + ~500 tokens output = $0.006/candidate
 - FREE tier (5 candidates): $0.03/month
-- STARTER tier (100 candidates): $0.60/month
+- RECRUITER tier (100 candidates): $0.60/month
 - PROFESSIONAL tier (1,000 candidates): $6/month
 
 **Why Hybrid AI + Python?**

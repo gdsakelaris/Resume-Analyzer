@@ -325,7 +325,7 @@ print("Migration complete!")
 - Workers in same region = FREE
 
 **Total Monthly Cost Examples**:
-- **Starter tier** (100 candidates/month): ~$0.02/month
+- **Recruiter tier** (100 candidates/month): ~$0.02/month
 - **Professional tier** (1,000 candidates/month): ~$0.15/month
 - **Enterprise tier** (10,000 candidates/month): ~$1.50/month
 

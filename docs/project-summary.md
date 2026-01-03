@@ -60,7 +60,7 @@ current_period_end (datetime)
 **Pricing Tiers (Enforced)**:
 
 - **FREE**: $0/mo - 5 candidates/month (trial tier)
-- **STARTER**: $50/mo - 100 candidates/month (solo recruiters)
+- **RECRUITER** (internal API value: `starter`): $50/mo - 100 candidates/month (solo recruiters)
 - **SMALL_BUSINESS**: $100/mo - 250 candidates/month (small teams)
 - **PROFESSIONAL**: $200/mo - 1000 candidates/month (growing companies)
 - **ENTERPRISE**: $500/mo base + $0.50/candidate - Unlimited (high-volume recruiting)

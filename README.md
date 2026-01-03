@@ -6,7 +6,7 @@ Starscreen is a production-ready SaaS platform that automates resume screening u
 
 - **AI-Powered Scoring**: Intelligent resume analysis using OpenAI GPT-4
 - **Multi-Tenant Architecture**: Secure, isolated workspaces for each organization
-- **Subscription Tiers**: Free, Starter, Small Business, Professional, and Enterprise plans
+- **Subscription Tiers**: Free, Recruiter, Small Business, Professional, and Enterprise plans
 - **Cloud-Native Storage**: AWS S3 integration for horizontal scalability
 - **Async Processing**: Celery + Redis for background resume parsing and scoring
 - **RESTful API**: FastAPI with automatic OpenAPI documentation
@@ -173,7 +173,7 @@ See `.env.example` for all available configuration options.
 | Plan | Price | Candidate Limit |
 |------|-------|----------------|
 | Free | $0 | 10 candidates |
-| Starter | $19/month | 100 candidates |
+| Recruiter | $19/month | 100 candidates |
 | Small Business | $49/month | 500 candidates |
 | Professional | $149/month | 2,500 candidates |
 | Enterprise | $499/month | 15,000 candidates |

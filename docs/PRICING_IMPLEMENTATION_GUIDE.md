@@ -7,7 +7,7 @@ A beautiful, professional pricing page with:
 
 **Pricing Tiers:**
 - **Free**: $0/month - 10 candidates, basic features
-- **Starter**: $49/mo ($39 annual) - 100 candidates
+- **Recruiter**: $49/mo ($39 annual) - 100 candidates
 - **Small Business**: $149/mo ($119 annual) - 250 candidates ⭐ POPULAR
 - **Professional**: $399/mo ($319 annual) - 1,000 candidates
 - **Enterprise**: Custom pricing - Unlimited candidates
@@ -43,7 +43,7 @@ Complete Stripe checkout integration with:
 5. Creates Stripe subscription with trial
 6. Redirects to dashboard
 
-**Access**: `/static/checkout.html?plan=starter&billing=monthly`
+**Access**: `/static/checkout.html?plan=starter&billing=monthly` (note: `starter` is the internal API value; displays as "Recruiter" to users)
 
 ---
 
@@ -108,7 +108,7 @@ FRONTEND_URL: str = "http://localhost:8000"  # For Stripe redirects
 
    Create 3 products:
 
-   Product 1: "Starter Plan"
+   Product 1: "Recruiter Plan"
    - Monthly: $49 → Copy price ID
    - Annual: $468 ($39/mo × 12) → Copy price ID
 
