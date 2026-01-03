@@ -205,7 +205,7 @@
                                     </a>
                                     <!-- Cancel Subscription (only show if user has paid plan) -->
                                     <template x-if="subscription && subscription.plan !== 'free'">
-                                        <button @click="cancelSubscription()"
+                                        <button @click.stop="cancelSubscription(); userMenuOpen = false"
                                                 class="w-full flex items-center gap-3 px-4 py-2 text-sm text-orange-600 hover:bg-orange-50">
                                             <svg class="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
@@ -227,7 +227,7 @@
                                         </svg>
                                         Terms of Service
                                     </a>
-                                    <button onclick="deleteAccount()"
+                                    <button @click.stop="deleteAccount(); userMenuOpen = false"
                                             class="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50">
                                         <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
@@ -589,14 +589,13 @@
                                             <td class="px-4 py-3 text-sm text-slate-500" x-text="new Date(candidate.created_at).toLocaleString()"></td>
                                             <td class="px-4 py-3">
                                                 <div class="flex items-center gap-3">
-                                                    <a :href="`/api/v1/jobs/${candidate.job_id}/candidates/${candidate.id}/file`"
-                                                       target="_blank"
+                                                    <button @click="downloadResume(candidate.job_id, candidate.id, candidate.original_filename)"
                                                        class="text-brand-600 hover:text-brand-800 text-sm font-medium flex items-center gap-1">
                                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
                                                         </svg>
                                                         Download
-                                                    </a>
+                                                    </button>
                                                     <button @click="deleteCandidate(candidate.id, candidate.job_id)" class="text-red-600 hover:text-red-800 text-sm font-medium">Delete</button>
                                                 </div>
                                             </td>
@@ -1094,6 +1093,31 @@
                         console.error('Delete error:', error);
                         const errorMsg = error.message || error.toString() || 'Unknown error';
                         alert('❌ Error deleting candidate: ' + errorMsg);
+                    }
+                },
+
+                async downloadResume(jobId, candidateId, filename) {
+                    try {
+                        const response = await Auth.fetch(`${API_BASE}/jobs/${jobId}/candidates/${candidateId}/file`);
+                        if (!response.ok) {
+                            throw new Error('Failed to download resume');
+                        }
+
+                        // Get the file blob
+                        const blob = await response.blob();
+
+                        // Create a download link and trigger it
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = filename || 'resume.pdf';
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        window.URL.revokeObjectURL(url);
+                    } catch (error) {
+                        console.error('Download error:', error);
+                        alert('Failed to download resume: ' + error.message);
                     }
                 },
 
