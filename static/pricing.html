@@ -470,7 +470,7 @@
                                             <div class="text-left">
                                                 <p class="text-sm text-slate-500 mb-1">Current Plan</p>
                                                 <p class="text-lg font-bold text-slate-900" x-text="currentPlan"></p>
-                                                <p class="text-sm text-slate-600" x-text="getPlanPrice(currentPlanValue) + '/month'"></p>
+                                                <p class="text-sm text-slate-600" x-text="getPlanPriceFormatted(currentPlanValue) + '/month'"></p>
                                             </div>
                                             <svg class="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path>
@@ -478,7 +478,7 @@
                                             <div class="text-right">
                                                 <p class="text-sm text-slate-500 mb-1">New Plan</p>
                                                 <p class="text-lg font-bold text-brand-600" x-text="getPlanDisplayName(pendingPlanChange.tier)"></p>
-                                                <p class="text-sm text-slate-600" x-text="getPlanPrice(pendingPlanChange.tier) + '/month'"></p>
+                                                <p class="text-sm text-slate-600" x-text="getPlanPriceFormatted(pendingPlanChange.tier) + '/month'"></p>
                                             </div>
                                         </div>
 
@@ -597,12 +597,17 @@
 
                     getPlanPrice(tier) {
                         const prices = {
-                            'starter': '$20',
-                            'small_business': '$149',
-                            'professional': '$499',
-                            'free': '$0'
+                            'starter': 20,
+                            'small_business': 149,
+                            'professional': 499,
+                            'free': 0
                         };
-                        return prices[tier] || '$0';
+                        return prices[tier] || 0;
+                    },
+
+                    getPlanPriceFormatted(tier) {
+                        const price = this.getPlanPrice(tier);
+                        return `$${price}`;
                     },
 
                     getPlanLimit(tier) {

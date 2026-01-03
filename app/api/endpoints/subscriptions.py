@@ -403,7 +403,7 @@ async def upgrade_subscription(
             logger.info(f"Upgraded subscription for user {current_user.id} to {new_tier} (limit: {tier_config['limit']})")
 
             return {
-                "message": f"Successfully upgraded to {new_tier} plan! You now have access to {tier_config['limit']} candidates per month.",
+                "message": f"Successfully upgraded to {tier_config['plan'].display_name} plan! You now have access to {tier_config['limit']} candidates per month.",
                 "status": "active",
                 "plan": subscription.plan.value,
                 "monthly_candidate_limit": subscription.monthly_candidate_limit,
@@ -431,7 +431,7 @@ async def upgrade_subscription(
             period_end_date = subscription.current_period_end.strftime('%B %d, %Y') if subscription.current_period_end else 'the end of your billing period'
 
             return {
-                "message": f"Your plan will change to {new_tier} on {period_end_date}. You'll keep your current {subscription.plan.display_name} benefits until then.",
+                "message": f"Your plan will change to {tier_config['plan'].display_name} on {period_end_date}. You'll keep your current {subscription.plan.display_name} benefits until then.",
                 "status": "active",
                 "plan": subscription.plan.value,  # Keep current plan
                 "monthly_candidate_limit": subscription.monthly_candidate_limit,  # Keep current limit
