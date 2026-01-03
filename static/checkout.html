@@ -392,25 +392,13 @@
             }
 
             window.cancelSubscriptionGlobal = function() {
-                console.log('cancelSubscriptionGlobal called');
-                if (modalState) {
-                    const message = `Are you sure you want to cancel your subscription?<br><br>` +
-                        `Your subscription will remain active until the end of your billing period, then you'll be downgraded to the <strong>Free plan</strong> (10 candidates/month).`;
-                    modalState.cancelSubModal.show = true;
-                    modalState.cancelSubModal.message = message;
-                    modalState.cancelSubModal.loading = false;
-                }
+                console.log('cancelSubscriptionGlobal called - dispatching event');
+                window.dispatchEvent(new CustomEvent('open-cancel-subscription-modal'));
             };
 
             window.deleteAccount = function() {
-                console.log('deleteAccount called from global');
-                if (modalState) {
-                    modalState.deleteAccountModal.show = true;
-                    modalState.deleteAccountModal.step = 1;
-                    modalState.deleteAccountModal.confirmText = '';
-                    modalState.deleteAccountModal.error = '';
-                    modalState.deleteAccountModal.loading = false;
-                }
+                console.log('deleteAccount called - dispatching event');
+                window.dispatchEvent(new CustomEvent('open-delete-account-modal'));
             };
 
             function cancelDeleteAccount() {
@@ -796,7 +784,9 @@
         </script>
 
         <!-- Confirmation Modals -->
-        <div x-data="confirmationModals()" x-cloak>
+        <div x-data="confirmationModals()" x-cloak
+             @open-delete-account-modal.window="deleteAccountModal.show = true; deleteAccountModal.step = 1; deleteAccountModal.confirmText = ''; deleteAccountModal.error = ''; deleteAccountModal.loading = false"
+             @open-cancel-subscription-modal.window="cancelSubModal.show = true; cancelSubModal.message = 'Are you sure you want to cancel your subscription?<br><br>Your subscription will remain active until the end of your billing period, then you\\'ll be downgraded to the <strong>Free plan</strong> (10 candidates/month).'; cancelSubModal.loading = false">
             <!-- Delete Account Modal (same as other pages) -->
             <div x-show="deleteAccountModal.show" class="fixed inset-0 z-50 overflow-y-auto" @keydown.escape.window="deleteAccountModal.show = false">
                 <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
