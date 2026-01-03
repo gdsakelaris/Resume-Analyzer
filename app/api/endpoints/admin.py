@@ -32,7 +32,7 @@ def list_all_users(
     """List all users in the system."""
     users = db.query(User).all()
     return [{
-        "id": u.id,
+        "id": str(u.id),
         "email": u.email,
         "tenant_id": str(u.tenant_id),
         "is_verified": u.is_verified,
@@ -70,8 +70,8 @@ def list_all_subscriptions(
     """List all subscriptions in the system."""
     subscriptions = db.query(Subscription).join(User).all()
     return [{
-        "id": s.id,
-        "user_id": s.user_id,
+        "id": str(s.id),
+        "user_id": str(s.user_id),
         "user_email": s.user.email,  # Include user email
         "plan": s.plan.value,
         "status": s.status.value,
@@ -135,7 +135,7 @@ def list_all_jobs(
     """List all jobs across all tenants."""
     jobs = db.query(Job).all()
     return [{
-        "id": j.id,
+        "id": str(j.id),
         "tenant_id": str(j.tenant_id),
         "title": j.title,
         "description": j.description[:100] + "..." if len(j.description) > 100 else j.description,
@@ -207,8 +207,8 @@ def list_all_candidates(
     """List all candidates across all tenants."""
     candidates = db.query(Candidate).all()
     return [{
-        "id": c.id,
-        "job_id": c.job_id,
+        "id": str(c.id),
+        "job_id": str(c.job_id),
         "tenant_id": str(c.tenant_id),
         "original_filename": c.original_filename,
         "email": c.email,
