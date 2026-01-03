@@ -32,39 +32,56 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     """Upgrade schema to add multi-tenancy and authentication."""
 
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    existing_tables = inspector.get_table_names()
+
+    # Create ENUM types if they don't exist
+    result = conn.execute(sa.text("SELECT 1 FROM pg_type WHERE typname = 'subscriptionplan'")).fetchone()
+    if not result:
+        subscriptionplan_enum = postgresql.ENUM('free', 'starter', 'professional', 'enterprise', name='subscriptionplan')
+        subscriptionplan_enum.create(conn)
+
+    result = conn.execute(sa.text("SELECT 1 FROM pg_type WHERE typname = 'subscriptionstatus'")).fetchone()
+    if not result:
+        subscriptionstatus_enum = postgresql.ENUM('trialing', 'active', 'past_due', 'canceled', 'unpaid', name='subscriptionstatus')
+        subscriptionstatus_enum.create(conn)
+
     # 1. Create users table (indexes auto-created by SQLAlchemy from Column definitions)
-    op.create_table(
-        'users',
-        sa.Column('id', postgresql.UUID(as_uuid=True), primary_key=True, nullable=False, index=True),
-        sa.Column('tenant_id', postgresql.UUID(as_uuid=True), nullable=False, unique=True, index=True),
-        sa.Column('email', sa.String(), nullable=False, unique=True, index=True),
-        sa.Column('hashed_password', sa.String(), nullable=False),
-        sa.Column('full_name', sa.String(), nullable=True),
-        sa.Column('company_name', sa.String(), nullable=True),
-        sa.Column('is_active', sa.Boolean(), nullable=False, server_default='true'),
-        sa.Column('is_verified', sa.Boolean(), nullable=False, server_default='false'),
-        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
-        sa.Column('updated_at', sa.DateTime(timezone=True), onupdate=sa.func.now()),
-        sa.Column('last_login_at', sa.DateTime(timezone=True), nullable=True),
-    )
+    if 'users' not in existing_tables:
+        op.create_table(
+            'users',
+            sa.Column('id', postgresql.UUID(as_uuid=True), primary_key=True, nullable=False, index=True),
+            sa.Column('tenant_id', postgresql.UUID(as_uuid=True), nullable=False, unique=True, index=True),
+            sa.Column('email', sa.String(), nullable=False, unique=True, index=True),
+            sa.Column('hashed_password', sa.String(), nullable=False),
+            sa.Column('full_name', sa.String(), nullable=True),
+            sa.Column('company_name', sa.String(), nullable=True),
+            sa.Column('is_active', sa.Boolean(), nullable=False, server_default='true'),
+            sa.Column('is_verified', sa.Boolean(), nullable=False, server_default='false'),
+            sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+            sa.Column('updated_at', sa.DateTime(timezone=True), onupdate=sa.func.now()),
+            sa.Column('last_login_at', sa.DateTime(timezone=True), nullable=True),
+        )
 
     # 2. Create subscriptions table (indexes auto-created by SQLAlchemy from Column definitions)
-    op.create_table(
-        'subscriptions',
-        sa.Column('id', postgresql.UUID(as_uuid=True), primary_key=True, nullable=False),
-        sa.Column('user_id', postgresql.UUID(as_uuid=True), nullable=False, unique=True, index=True),
-        sa.Column('stripe_customer_id', sa.String(), nullable=True, unique=True, index=True),
-        sa.Column('stripe_subscription_id', sa.String(), nullable=True, unique=True, index=True),
-        sa.Column('plan', sa.Enum('free', 'starter', 'professional', 'enterprise', name='subscriptionplan'), nullable=False, server_default='free'),
-        sa.Column('status', sa.Enum('trialing', 'active', 'past_due', 'canceled', 'unpaid', name='subscriptionstatus'), nullable=False, server_default='trialing', index=True),
-        sa.Column('monthly_candidate_limit', sa.Integer(), nullable=False, server_default='5'),
-        sa.Column('candidates_used_this_month', sa.Integer(), nullable=False, server_default='0'),
-        sa.Column('current_period_start', sa.DateTime(timezone=True), nullable=True),
-        sa.Column('current_period_end', sa.DateTime(timezone=True), nullable=True),
-        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
-        sa.Column('updated_at', sa.DateTime(timezone=True), onupdate=sa.func.now()),
-        sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
-    )
+    if 'subscriptions' not in existing_tables:
+        op.create_table(
+            'subscriptions',
+            sa.Column('id', postgresql.UUID(as_uuid=True), primary_key=True, nullable=False),
+            sa.Column('user_id', postgresql.UUID(as_uuid=True), nullable=False, unique=True, index=True),
+            sa.Column('stripe_customer_id', sa.String(), nullable=True, unique=True, index=True),
+            sa.Column('stripe_subscription_id', sa.String(), nullable=True, unique=True, index=True),
+            sa.Column('plan', postgresql.ENUM('free', 'starter', 'professional', 'enterprise', name='subscriptionplan', create_type=False), nullable=False, server_default='free'),
+            sa.Column('status', postgresql.ENUM('trialing', 'active', 'past_due', 'canceled', 'unpaid', name='subscriptionstatus', create_type=False), nullable=False, server_default='trialing', index=True),
+            sa.Column('monthly_candidate_limit', sa.Integer(), nullable=False, server_default='5'),
+            sa.Column('candidates_used_this_month', sa.Integer(), nullable=False, server_default='0'),
+            sa.Column('current_period_start', sa.DateTime(timezone=True), nullable=True),
+            sa.Column('current_period_end', sa.DateTime(timezone=True), nullable=True),
+            sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+            sa.Column('updated_at', sa.DateTime(timezone=True), onupdate=sa.func.now()),
+            sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
+        )
 
     # 3. Add tenant_id to jobs table
     # First add as nullable to allow migration
