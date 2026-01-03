@@ -143,20 +143,13 @@ def login(
             detail="Account is inactive. Please contact support."
         )
 
-    # Check if user is verified
-    if not user.is_verified:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Email not verified. Please check your email for the verification code."
-        )
-
     # Update last login timestamp
     user.last_login_at = datetime.utcnow()
     db.commit()
 
-    logger.info(f"User logged in: {user.email}")
+    logger.info(f"User logged in: {user.email} (verified: {user.is_verified})")
 
-    # Generate JWT tokens
+    # Generate JWT tokens (allow unverified users to login and see verification page)
     access_token = create_access_token(data={"sub": str(user.id), "tenant_id": str(user.tenant_id), "is_admin": user.is_admin})
     refresh_token = create_refresh_token(data={"sub": str(user.id)})
 
