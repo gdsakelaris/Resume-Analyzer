@@ -256,15 +256,15 @@
                 <div class="col-span-12 lg:col-span-4 flex flex-col gap-4 h-full">
 
                     <div class="flex justify-between items-center">
-                        <h2 class="text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">Positions</h2>
+                        <h2 class="text-lg font-bold text-slate-800">Positions</h2>
                         <button @click="showCreateModal = true"
-                            class="text-sm bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:from-emerald-600 hover:via-teal-600 hover:to-cyan-600 text-white py-2 px-4 rounded-md font-medium transition-all shadow-md hover:shadow-lg flex items-center gap-2">
+                            class="text-sm bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded-md font-medium transition-all shadow-sm hover:shadow-md flex items-center gap-2">
                             <span>+ New Job</span>
                         </button>
                     </div>
 
                     <div
-                        class="bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 rounded-xl shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] border-2 border-purple-200 flex-1 overflow-hidden flex flex-col max-h-[calc(100vh-12rem)]">
+                        class="bg-white rounded-xl shadow-md border border-indigo-100 flex-1 overflow-hidden flex flex-col max-h-[calc(100vh-12rem)]">
                         <div class="overflow-y-auto p-2 space-y-2 flex-1 scrollbar-hide min-h-0">
 
                             <template x-if="jobs.length === 0">
@@ -284,19 +284,19 @@
 
                             <template x-for="job in jobs" :key="job.id">
                                 <div @click.self="selectJob(job)"
-                                    class="group cursor-pointer p-4 rounded-lg transition-all duration-200 border-2 relative"
-                                    :class="selectedJob?.id === job.id ? 'bg-gradient-to-r from-violet-100 via-fuchsia-100 to-pink-100 border-violet-400 ring-2 ring-violet-300 shadow-lg' : 'bg-gradient-to-br from-white via-blue-50 to-purple-50 border-blue-200 hover:border-purple-300 hover:shadow-lg hover:from-blue-50 hover:via-purple-50 hover:to-pink-50'">
+                                    class="group cursor-pointer p-4 rounded-lg transition-all duration-200 border-l-4 border relative"
+                                    :class="selectedJob?.id === job.id ? 'bg-indigo-50 border-l-indigo-600 border-indigo-200 shadow-md' : 'bg-white border-l-cyan-400 border-slate-200 hover:border-l-indigo-500 hover:bg-slate-50 hover:shadow-sm'">
                                     <div class="flex justify-between items-start mb-1">
                                         <h3 @click="selectJob(job)"
-                                            class="font-bold text-slate-900 group-hover:bg-gradient-to-r group-hover:from-purple-600 group-hover:to-pink-600 group-hover:bg-clip-text group-hover:text-transparent transition-all flex-1"
+                                            class="font-semibold text-slate-900 group-hover:text-indigo-700 transition-colors flex-1"
                                             x-text="job.title"></h3>
                                         <div class="flex items-center gap-2">
                                             <span x-show="job.status !== 'COMPLETED'"
-                                                class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold border-2"
+                                                class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold"
                                                 :class="{
-                                                  'bg-gradient-to-r from-yellow-200 to-orange-200 text-orange-900 border-orange-300': job.status === 'PENDING',
-                                                  'bg-gradient-to-r from-blue-200 to-cyan-200 text-blue-900 border-cyan-300': job.status === 'PROCESSING',
-                                                  'bg-gradient-to-r from-red-200 to-pink-200 text-red-900 border-pink-300': job.status === 'FAILED'
+                                                  'bg-amber-100 text-amber-800': job.status === 'PENDING',
+                                                  'bg-cyan-100 text-cyan-800': job.status === 'PROCESSING',
+                                                  'bg-red-100 text-red-800': job.status === 'FAILED'
                                               }" x-text="job.status"></span>
                                             <!-- 3-dot menu button -->
                                             <button
@@ -370,16 +370,16 @@
                 <div class="col-span-12 lg:col-span-8 h-full flex flex-col">
 
                     <div x-show="!selectedJob"
-                        class="h-full flex flex-col items-center justify-center text-center p-8 bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 rounded-xl shadow-lg border-2 border-purple-200 border-dashed">
-                        <div class="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center mb-4 shadow-lg">
+                        class="h-full flex flex-col items-center justify-center text-center p-8 bg-white rounded-xl shadow-sm border-2 border-slate-200 border-dashed">
+                        <div class="w-16 h-16 bg-indigo-600 rounded-full flex items-center justify-center mb-4">
                             <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122">
                                 </path>
                             </svg>
                         </div>
-                        <h3 class="text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">Select a Job</h3>
-                        <p class="text-slate-600 max-w-sm mt-2 font-medium">Click on a position from the left sidebar to view
+                        <h3 class="text-lg font-semibold text-slate-900">Select a Job</h3>
+                        <p class="text-slate-500 max-w-sm mt-2">Click on a position from the left sidebar to view
                             candidates, upload resumes, and see AI insights.</p>
                     </div>
 
@@ -387,14 +387,14 @@
 
                         <div class="grid grid-cols-2 gap-4">
                             <div
-                                class="bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 p-5 rounded-xl border-2 border-purple-300 shadow-xl">
-                                <p class="text-xs font-bold text-white uppercase tracking-wider">Total
+                                class="bg-cyan-500 p-5 rounded-xl shadow-md hover:shadow-lg transition-shadow">
+                                <p class="text-xs font-semibold text-cyan-50 uppercase tracking-wider">Total
                                     Candidates</p>
                                 <p class="text-3xl font-bold text-white mt-1" x-text="candidates.length"></p>
                             </div>
                             <div
-                                class="bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 p-5 rounded-xl border-2 border-teal-300 shadow-xl">
-                                <p class="text-xs font-bold text-white uppercase tracking-wider">AI Screened</p>
+                                class="bg-indigo-600 p-5 rounded-xl shadow-md hover:shadow-lg transition-shadow">
+                                <p class="text-xs font-semibold text-indigo-50 uppercase tracking-wider">AI Screened</p>
                                 <p class="text-3xl font-bold text-white mt-1"
                                     x-text="candidates.filter(c => c.status === 'SCORED').length"></p>
                             </div>
@@ -439,28 +439,28 @@
 
                                 <div class="mb-6 flex gap-4">
                                     <label
-                                        class="flex-1 group relative flex flex-col items-center justify-center p-6 bg-gradient-to-br from-orange-500 via-pink-500 to-purple-600 hover:from-orange-600 hover:via-pink-600 hover:to-purple-700 rounded-xl transition-all cursor-pointer shadow-xl hover:shadow-2xl border-2 border-pink-300">
+                                        class="flex-1 group relative flex flex-col items-center justify-center p-6 bg-cyan-500 hover:bg-cyan-600 rounded-xl transition-all cursor-pointer shadow-md hover:shadow-lg">
                                         <div class="text-center">
-                                            <svg class="mx-auto h-8 w-8 text-white drop-shadow-lg" fill="none" viewBox="0 0 24 24"
+                                            <svg class="mx-auto h-8 w-8 text-white" fill="none" viewBox="0 0 24 24"
                                                 stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                     d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                                             </svg>
-                                            <p class="mt-2 text-sm text-white font-bold drop-shadow-md">Upload Resumes</p>
+                                            <p class="mt-2 text-sm text-white font-semibold">Upload Resumes</p>
                                         </div>
                                         <input type="file" class="hidden" accept=".pdf,.doc,.docx" multiple
                                             @change="uploadFile($event, 'single')">
                                     </label>
 
                                     <label
-                                        class="flex-1 group relative flex flex-col items-center justify-center p-6 bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 hover:from-blue-600 hover:via-indigo-600 hover:to-purple-700 rounded-xl transition-all cursor-pointer shadow-xl hover:shadow-2xl border-2 border-indigo-300">
+                                        class="flex-1 group relative flex flex-col items-center justify-center p-6 bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-all cursor-pointer shadow-md hover:shadow-lg">
                                         <div class="text-center">
-                                            <svg class="mx-auto h-8 w-8 text-white drop-shadow-lg" fill="none" viewBox="0 0 24 24"
+                                            <svg class="mx-auto h-8 w-8 text-white" fill="none" viewBox="0 0 24 24"
                                                 stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                     d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
                                             </svg>
-                                            <p class="mt-2 text-sm text-white font-bold drop-shadow-md">Batch ZIP Upload</p>
+                                            <p class="mt-2 text-sm text-white font-semibold">Batch ZIP Upload</p>
                                         </div>
                                         <input type="file" class="hidden" accept=".zip"
                                             @change="uploadFile($event, 'bulk')">
