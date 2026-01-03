@@ -143,6 +143,13 @@ def login(
             detail="Account is inactive. Please contact support."
         )
 
+    # Check if user is verified
+    if not user.is_verified:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Email not verified. Please check your email for the verification code."
+        )
+
     # Update last login timestamp
     user.last_login_at = datetime.utcnow()
     db.commit()
