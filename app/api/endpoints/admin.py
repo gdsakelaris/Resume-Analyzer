@@ -311,8 +311,8 @@ def list_all_evaluations(
     """List all evaluations across all tenants."""
     evaluations = db.query(Evaluation).all()
     return [{
-        "id": e.id,
-        "candidate_id": e.candidate_id,
+        "id": str(e.id),
+        "candidate_id": str(e.candidate_id),
         "tenant_id": str(e.tenant_id),
         "match_score": e.match_score,
         "created_at": e.created_at

@@ -619,8 +619,8 @@
                                         <tr class="hover:bg-slate-50">
                                             <td class="px-4 py-3">
                                                 <div class="flex items-center gap-2">
-                                                    <span class="text-sm font-mono text-slate-900 truncate-id" :title="eval.id" x-text="eval.id.split('-')[0]"></span>
-                                                    <button @click="copyToClipboard(eval.id)"
+                                                    <span class="text-sm font-mono text-slate-900 truncate-id" :title="String(eval.id)" x-text="String(eval.id).split('-')[0]"></span>
+                                                    <button @click="copyToClipboard(String(eval.id))"
                                                             class="copy-btn p-1 hover:bg-slate-200 rounded transition"
                                                             title="Copy evaluation ID">
                                                         <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -631,8 +631,8 @@
                                             </td>
                                             <td class="px-4 py-3">
                                                 <div class="flex items-center gap-2">
-                                                    <span class="text-sm font-mono text-slate-900 truncate-id" :title="eval.candidate_id" x-text="eval.candidate_id.split('-')[0]"></span>
-                                                    <button @click="copyToClipboard(eval.candidate_id)"
+                                                    <span class="text-sm font-mono text-slate-900 truncate-id" :title="String(eval.candidate_id)" x-text="String(eval.candidate_id).split('-')[0]"></span>
+                                                    <button @click="copyToClipboard(String(eval.candidate_id))"
                                                             class="copy-btn p-1 hover:bg-slate-200 rounded transition"
                                                             title="Copy candidate ID">
                                                         <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
