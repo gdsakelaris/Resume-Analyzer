@@ -231,28 +231,47 @@ def delete_candidate_admin(
     - Deleting the candidate
     - Deleting the file from storage
     """
-    candidate = db.query(Candidate).filter(Candidate.id == candidate_id).first()
-    if not candidate:
-        raise HTTPException(status_code=404, detail="Candidate not found")
-
-    # Delete evaluation first (foreign key constraint)
-    evaluation = db.query(Evaluation).filter(Evaluation.candidate_id == candidate_id).first()
-    if evaluation:
-        db.delete(evaluation)
-        logger.info(f"Deleted evaluation for candidate {candidate_id}")
-
-    # Delete file from storage
     try:
-        storage.delete_file(candidate.file_path)
-        logger.info(f"Deleted file {candidate.file_path}")
-    except Exception as e:
-        logger.error(f"Failed to delete file {candidate.file_path}: {e}")
+        logger.info(f"Admin {admin_user.email} attempting to delete candidate {candidate_id}")
 
-    # Delete candidate
-    db.delete(candidate)
-    db.commit()
-    logger.info(f"Admin deleted candidate {candidate_id}")
-    return {"message": f"Candidate {candidate_id} deleted successfully"}
+        candidate = db.query(Candidate).filter(Candidate.id == candidate_id).first()
+        if not candidate:
+            logger.warning(f"Candidate {candidate_id} not found")
+            raise HTTPException(status_code=404, detail="Candidate not found")
+
+        # Delete evaluation first (foreign key constraint)
+        evaluation = db.query(Evaluation).filter(Evaluation.candidate_id == candidate_id).first()
+        if evaluation:
+            db.delete(evaluation)
+            logger.info(f"Deleted evaluation {evaluation.id} for candidate {candidate_id}")
+
+        # Delete file from storage
+        try:
+            storage.delete_file(candidate.file_path)
+            logger.info(f"Deleted file {candidate.file_path}")
+        except Exception as e:
+            logger.error(f"Failed to delete file {candidate.file_path}: {e}")
+            # Continue with deletion even if file deletion fails
+
+        # Delete candidate
+        db.delete(candidate)
+        db.commit()
+
+        # Verify deletion
+        verify = db.query(Candidate).filter(Candidate.id == candidate_id).first()
+        if verify:
+            logger.error(f"DELETION FAILED: Candidate {candidate_id} still exists after commit!")
+            raise HTTPException(status_code=500, detail="Deletion failed - candidate still exists")
+
+        logger.info(f"Successfully deleted candidate {candidate_id}")
+        return {"message": f"Candidate {candidate_id} deleted successfully", "deleted": True}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error deleting candidate {candidate_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to delete candidate: {str(e)}")
 
 
 @router.delete("/candidates/delete-all")

@@ -944,7 +944,14 @@
                 async deleteCandidate(candidateId, jobId) {
                     if (!confirm('Delete this candidate?')) return;
                     try {
+                        console.log('Deleting candidate:', candidateId);
+                        const countBefore = this.candidates.length;
+
                         const response = await Auth.fetch(`${API_BASE}/admin/candidates/${candidateId}`, { method: 'DELETE' });
+                        if (!response.ok) {
+                            const errorData = await response.json();
+                            throw new Error(errorData.detail || 'Failed to delete candidate');
+                        }
                         const result = await response.json();
                         console.log('Delete response:', result);
 
@@ -953,10 +960,17 @@
                         await this.loadEvaluations();
                         await this.loadStats();
 
-                        alert('Candidate deleted successfully');
+                        const countAfter = this.candidates.length;
+                        console.log(`Candidates before: ${countBefore}, after: ${countAfter}`);
+
+                        if (countAfter >= countBefore) {
+                            alert('⚠️ WARNING: Candidate count did not decrease! Deletion may have failed. Check console logs.');
+                        } else {
+                            alert(`✓ Candidate deleted successfully (${countBefore} → ${countAfter})`);
+                        }
                     } catch (error) {
                         console.error('Delete error:', error);
-                        alert('Error deleting candidate: ' + error.message);
+                        alert('❌ Error deleting candidate: ' + error.message);
                     }
                 },
 
