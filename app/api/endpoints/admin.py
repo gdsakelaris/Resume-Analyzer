@@ -68,10 +68,11 @@ def list_all_subscriptions(
     admin_user: User = Depends(get_admin_user)
 ):
     """List all subscriptions in the system."""
-    subscriptions = db.query(Subscription).all()
+    subscriptions = db.query(Subscription).join(User).all()
     return [{
         "id": s.id,
         "user_id": s.user_id,
+        "user_email": s.user.email,  # Include user email
         "plan": s.plan.value,
         "status": s.status.value,
         "candidates_used_this_month": s.candidates_used_this_month,
