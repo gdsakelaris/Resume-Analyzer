@@ -10,12 +10,21 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    - name: Debug connection info
+      run: |
+        echo "Attempting to deploy to EC2..."
+        echo "This will connect via SSH and deploy the latest code"
+
     - name: Deploy to EC2
       uses: appleboy/ssh-action@v1.0.0
       with:
         host: ${{ secrets.EC2_HOST }}
         username: ubuntu
         key: ${{ secrets.EC2_SSH_KEY }}
+        port: 22
+        timeout: 60s
+        command_timeout: 10m
+        script_stop: true
         script: |
           cd ~/Resume-Analyzer
           git pull origin main
