@@ -1576,8 +1576,9 @@
                     },
 
                     cancelSubscription() {
+                        console.log('cancelSubscription called', this.subscription);
                         // Show modal confirmation
-                        if (modalState) {
+                        if (modalState && this.subscription) {
                             const message = `Are you sure you want to cancel your <strong>${this.subscription.plan_display}</strong> subscription?<br><br>` +
                                 `Your subscription will remain active until the end of your billing period, then you'll be downgraded to the <strong>Free plan</strong> (10 candidates/month).`;
 
@@ -1591,6 +1592,7 @@
                     },
 
                     deleteAccount() {
+                        console.log('deleteAccount called');
                         if (modalState) {
                             modalState.deleteAccountModal = {
                                 show: true,
