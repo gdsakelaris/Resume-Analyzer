@@ -239,6 +239,15 @@ async def get_current_subscription(
     if subscription.current_period_end:
         period_end_timestamp = int(subscription.current_period_end.timestamp() * 1000)
 
+    # Check if subscription is scheduled for cancellation
+    cancel_at_period_end = False
+    if subscription.stripe_subscription_id:
+        try:
+            stripe_sub = stripe.Subscription.retrieve(subscription.stripe_subscription_id)
+            cancel_at_period_end = stripe_sub.get('cancel_at_period_end', False)
+        except Exception as e:
+            logger.warning(f"Could not retrieve Stripe subscription status: {e}")
+
     return {
         "plan": subscription.plan.value,
         "plan_display": subscription.plan.display_name,
@@ -247,7 +256,8 @@ async def get_current_subscription(
         "candidates_used_this_month": subscription.candidates_used_this_month,
         "remaining_candidates": subscription.remaining_candidates,
         "usage_percentage": subscription.usage_percentage,
-        "current_period_end": period_end_timestamp
+        "current_period_end": period_end_timestamp,
+        "cancel_at_period_end": cancel_at_period_end
     }
 
 
@@ -375,6 +385,9 @@ async def upgrade_subscription(
         # Get current subscription from Stripe
         stripe_sub = stripe.Subscription.retrieve(subscription.stripe_subscription_id)
 
+        # Check if subscription is scheduled for cancellation
+        has_scheduled_cancellation = stripe_sub.get('cancel_at_period_end', False)
+
         # Determine if this is an upgrade or downgrade
         current_price = subscription.plan.base_price_usd
         new_price = tier_config['plan'].base_price_usd
@@ -402,12 +415,18 @@ async def upgrade_subscription(
 
             logger.info(f"Upgraded subscription for user {current_user.id} to {new_tier} (limit: {tier_config['limit']})")
 
+            # Build success message
+            message = f"Successfully upgraded to {tier_config['plan'].display_name} plan! You now have access to {tier_config['limit']} candidates per month."
+            if has_scheduled_cancellation:
+                message += " Your scheduled cancellation has been removed and your subscription will continue."
+
             return {
-                "message": f"Successfully upgraded to {tier_config['plan'].display_name} plan! You now have access to {tier_config['limit']} candidates per month.",
+                "message": message,
                 "status": "active",
                 "plan": subscription.plan.value,
                 "monthly_candidate_limit": subscription.monthly_candidate_limit,
-                "candidates_used_this_month": subscription.candidates_used_this_month
+                "candidates_used_this_month": subscription.candidates_used_this_month,
+                "had_scheduled_cancellation": has_scheduled_cancellation
             }
         else:
             # DOWNGRADE: Schedule change for end of current period
