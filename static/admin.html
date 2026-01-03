@@ -639,42 +639,32 @@
                 },
 
                 async loadUsers() {
-                    const response = await fetch('/api/admin/users', {
-                        headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
-                    });
+                    const response = await Auth.fetch(`${API_BASE}/admin/users`);
                     this.users = await response.json();
                     this.stats.users = this.users.length;
                 },
 
                 async loadSubscriptions() {
-                    const response = await fetch('/api/admin/subscriptions', {
-                        headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
-                    });
+                    const response = await Auth.fetch(`${API_BASE}/admin/subscriptions`);
                     this.subscriptions = await response.json();
                     this.stats.subscriptions = this.subscriptions.filter(s => s.status === 'active').length;
                 },
 
                 async loadJobs() {
-                    const response = await fetch('/api/admin/jobs', {
-                        headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
-                    });
+                    const response = await Auth.fetch(`${API_BASE}/admin/jobs`);
                     this.jobs = await response.json();
                     this.stats.jobs = this.jobs.length;
                 },
 
                 async loadCandidates() {
-                    const response = await fetch('/api/admin/candidates', {
-                        headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
-                    });
+                    const response = await Auth.fetch(`${API_BASE}/admin/candidates`);
                     this.candidates = await response.json();
                     this.filteredCandidates = this.candidates;
                     this.stats.candidates = this.candidates.length;
                 },
 
                 async loadEvaluations() {
-                    const response = await fetch('/api/admin/evaluations', {
-                        headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
-                    });
+                    const response = await Auth.fetch(`${API_BASE}/admin/evaluations`);
                     this.evaluations = await response.json();
                 },
 
@@ -688,36 +678,25 @@
 
                 async deleteUser(id) {
                     if (!confirm('Are you sure? This will delete all jobs, candidates, and subscriptions for this user.')) return;
-                    await fetch(`/api/admin/users/${id}`, {
-                        method: 'DELETE',
-                        headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
-                    });
+                    await Auth.fetch(`${API_BASE}/admin/users/${id}`, { method: 'DELETE' });
                     await this.loadUsers();
                 },
 
                 async deleteSubscription(id) {
                     if (!confirm('Delete this subscription?')) return;
-                    await fetch(`/api/admin/subscriptions/${id}`, {
-                        method: 'DELETE',
-                        headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
-                    });
+                    await Auth.fetch(`${API_BASE}/admin/subscriptions/${id}`, { method: 'DELETE' });
                     await this.loadSubscriptions();
                 },
 
                 async resetUsage(id) {
-                    await fetch(`/api/admin/subscriptions/${id}/reset-usage`, {
-                        method: 'POST',
-                        headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
-                    });
+                    await Auth.fetch(`${API_BASE}/admin/subscriptions/${id}/reset-usage`, { method: 'POST' });
                     await this.loadSubscriptions();
+                    alert('Usage reset successfully');
                 },
 
                 async deleteJob(id) {
                     if (!confirm('Delete this job and all its candidates?')) return;
-                    await fetch(`/api/admin/jobs/${id}`, {
-                        method: 'DELETE',
-                        headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
-                    });
+                    await Auth.fetch(`${API_BASE}/admin/jobs/${id}`, { method: 'DELETE' });
                     await this.loadJobs();
                     await this.loadCandidates();
                 },
@@ -725,10 +704,7 @@
                 async deleteCandidate(candidateId, jobId) {
                     if (!confirm('Delete this candidate?')) return;
                     try {
-                        await fetch(`/api/admin/candidates/${candidateId}`, {
-                            method: 'DELETE',
-                            headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
-                        });
+                        await Auth.fetch(`${API_BASE}/admin/candidates/${candidateId}`, { method: 'DELETE' });
                         await this.loadCandidates();
                         await this.loadEvaluations();
                         alert('Candidate deleted successfully');
@@ -739,10 +715,7 @@
 
                 async deleteEvaluation(id) {
                     if (!confirm('Delete this evaluation?')) return;
-                    await fetch(`/api/admin/evaluations/${id}`, {
-                        method: 'DELETE',
-                        headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
-                    });
+                    await Auth.fetch(`${API_BASE}/admin/evaluations/${id}`, { method: 'DELETE' });
                     await this.loadEvaluations();
                 },
 
@@ -752,12 +725,10 @@
                     const confirmation = prompt('Type YES to confirm:');
                     if (confirmation !== 'YES') return;
 
-                    await fetch('/api/admin/candidates/delete-all', {
-                        method: 'DELETE',
-                        headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
-                    });
+                    await Auth.fetch(`${API_BASE}/admin/candidates/delete-all`, { method: 'DELETE' });
                     await this.loadCandidates();
                     await this.loadEvaluations();
+                    alert('All candidates deleted');
                 },
 
                 async deleteAllJobs() {
@@ -765,21 +736,17 @@
                     const confirmation = prompt('Type YES to confirm:');
                     if (confirmation !== 'YES') return;
 
-                    await fetch('/api/admin/jobs/delete-all', {
-                        method: 'DELETE',
-                        headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
-                    });
+                    await Auth.fetch(`${API_BASE}/admin/jobs/delete-all`, { method: 'DELETE' });
                     await this.loadJobs();
                     await this.loadCandidates();
+                    alert('All jobs deleted');
                 },
 
                 async resetAllUsage() {
                     if (!confirm('Reset usage counters for ALL subscriptions?')) return;
-                    await fetch('/api/admin/subscriptions/reset-all-usage', {
-                        method: 'POST',
-                        headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
-                    });
+                    await Auth.fetch(`${API_BASE}/admin/subscriptions/reset-all-usage`, { method: 'POST' });
                     await this.loadSubscriptions();
+                    alert('All usage counters reset');
                 }
             }
         }
