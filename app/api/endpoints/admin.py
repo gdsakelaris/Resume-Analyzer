@@ -6,7 +6,6 @@ In production, implement proper role-based access control (RBAC).
 """
 
 import logging
-from typing import List
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -135,7 +134,7 @@ def list_all_jobs(
     """List all jobs across all tenants."""
     jobs = db.query(Job).all()
     return [{
-        "id": str(j.id),
+        "id": j.id,
         "tenant_id": str(j.tenant_id),
         "title": j.title,
         "description": j.description[:100] + "..." if len(j.description) > 100 else j.description,
@@ -146,7 +145,7 @@ def list_all_jobs(
 
 @router.delete("/jobs/{job_id}")
 def delete_job(
-    job_id: UUID,
+    job_id: int,
     db: Session = Depends(get_db),
     admin_user: User = Depends(get_admin_user)
 ):
@@ -207,8 +206,8 @@ def list_all_candidates(
     """List all candidates across all tenants."""
     candidates = db.query(Candidate).all()
     return [{
-        "id": str(c.id),
-        "job_id": str(c.job_id),
+        "id": c.id,
+        "job_id": c.job_id,
         "tenant_id": str(c.tenant_id),
         "original_filename": c.original_filename,
         "email": c.email,
@@ -219,7 +218,7 @@ def list_all_candidates(
 
 @router.delete("/candidates/{candidate_id}")
 def delete_candidate_admin(
-    candidate_id: UUID,
+    candidate_id: int,
     db: Session = Depends(get_db),
     admin_user: User = Depends(get_admin_user)
 ):
@@ -311,8 +310,8 @@ def list_all_evaluations(
     """List all evaluations across all tenants."""
     evaluations = db.query(Evaluation).all()
     return [{
-        "id": str(e.id),
-        "candidate_id": str(e.candidate_id),
+        "id": e.id,
+        "candidate_id": e.candidate_id,
         "tenant_id": str(e.tenant_id),
         "match_score": e.match_score,
         "created_at": e.created_at
@@ -321,7 +320,7 @@ def list_all_evaluations(
 
 @router.delete("/evaluations/{evaluation_id}")
 def delete_evaluation(
-    evaluation_id: UUID,
+    evaluation_id: int,
     db: Session = Depends(get_db),
     admin_user: User = Depends(get_admin_user)
 ):
