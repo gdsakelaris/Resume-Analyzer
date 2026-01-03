@@ -865,7 +865,7 @@
         <!-- Confirmation Modals -->
         <div x-data="confirmationModals()" x-cloak
              @open-delete-account-modal.window="deleteAccountModal.show = true; deleteAccountModal.step = 1; deleteAccountModal.confirmText = ''; deleteAccountModal.error = ''; deleteAccountModal.loading = false"
-             @open-cancel-subscription-modal.window="cancelSubModal.show = true; cancelSubModal.message = 'Are you sure you want to cancel your subscription?<br><br>Your subscription will remain active until the end of your billing period, then you\\'ll be downgraded to the <strong>Free plan</strong> (10 candidates/month).'; cancelSubModal.loading = false">
+             @open-cancel-subscription-modal.window="cancelSubModal.show = true; cancelSubModal.message = 'Are you sure you want to cancel your subscription?<br><br>Your subscription will remain active until the end of your billing period, then you will be downgraded to the <strong>Free plan</strong> (10 candidates/month).'; cancelSubModal.loading = false">
             <!-- Delete Account Modal -->
             <div x-show="deleteAccountModal.show"
                  class="fixed inset-0 z-50 overflow-y-auto"
