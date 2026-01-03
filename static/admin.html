@@ -724,10 +724,29 @@
         }
 
         /**
+         * Cancel subscription
+         * Opens modal confirmation dialog
+         */
+        window.cancelSubscriptionGlobal = function() {
+            console.log('cancelSubscriptionGlobal called');
+            if (modalState) {
+                const message = `Are you sure you want to cancel your subscription?<br><br>` +
+                    `Your subscription will remain active until the end of your billing period, then you'll be downgraded to the <strong>Free plan</strong> (10 candidates/month).`;
+
+                modalState.cancelSubModal = {
+                    show: true,
+                    message: message,
+                    loading: false
+                };
+            }
+        };
+
+        /**
          * Delete the current user's account
          * Opens modal confirmation dialog
          */
-        function deleteAccount() {
+        window.deleteAccount = function() {
+            console.log('deleteAccount called from global');
             if (modalState) {
                 modalState.deleteAccountModal = {
                     show: true,
@@ -737,7 +756,7 @@
                     loading: false
                 };
             }
-        }
+        };
 
         /**
          * Cancel delete account process
