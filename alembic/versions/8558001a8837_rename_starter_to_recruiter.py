@@ -21,12 +21,15 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     """Rename 'starter' enum value to 'recruiter' in subscriptionplan enum."""
     # PostgreSQL doesn't support renaming enum values directly
-    # We need to add the new value, update the data, and remove the old value
+    # We need to add the new value in a committed transaction, then update the data
 
     # Step 1: Add 'recruiter' to the enum
-    op.execute("ALTER TYPE subscriptionplan ADD VALUE 'recruiter'")
+    # This must be done outside a transaction block
+    op.execute("COMMIT")  # Commit any pending transaction
+    op.execute("ALTER TYPE subscriptionplan ADD VALUE IF NOT EXISTS 'recruiter'")
 
     # Step 2: Update all existing 'starter' subscriptions to 'recruiter'
+    # Now we can use the new enum value
     op.execute("UPDATE subscriptions SET plan = 'recruiter' WHERE plan = 'starter'")
 
     # Note: We cannot remove 'starter' from the enum in PostgreSQL without recreating it
