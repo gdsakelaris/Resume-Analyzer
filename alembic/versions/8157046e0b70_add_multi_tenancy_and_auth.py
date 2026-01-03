@@ -83,41 +83,63 @@ def upgrade() -> None:
             sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
         )
 
-    # 3. Add tenant_id to jobs table
-    # First add as nullable to allow migration
-    op.add_column('jobs', sa.Column('tenant_id', postgresql.UUID(as_uuid=True), nullable=True))
+    # 3. Add tenant_id to jobs table if it doesn't exist
+    columns = [col['name'] for col in inspector.get_columns('jobs')]
 
-    # Create a default tenant for existing data (pre-launch, so this is safe)
-    default_tenant_id = uuid.uuid4()
-    default_user_id = uuid.uuid4()
+    if 'tenant_id' not in columns:
+        # First add as nullable to allow migration
+        op.add_column('jobs', sa.Column('tenant_id', postgresql.UUID(as_uuid=True), nullable=True))
 
-    # Insert a dummy user for existing jobs
-    op.execute(f"""
-        INSERT INTO users (id, tenant_id, email, hashed_password, is_active, is_verified)
-        VALUES ('{default_user_id}', '{default_tenant_id}', 'legacy@starscreen.internal', 'legacy_hash', true, false)
-    """)
+        # Create a default tenant for existing data (pre-launch, so this is safe)
+        default_tenant_id = uuid.uuid4()
+        default_user_id = uuid.uuid4()
 
-    # Update existing jobs with the default tenant_id
-    op.execute(f"UPDATE jobs SET tenant_id = '{default_tenant_id}' WHERE tenant_id IS NULL")
+        # Insert a dummy user for existing jobs
+        op.execute(f"""
+            INSERT INTO users (id, tenant_id, email, hashed_password, is_active, is_verified)
+            VALUES ('{default_user_id}', '{default_tenant_id}', 'legacy@starscreen.internal', 'legacy_hash', true, false)
+            ON CONFLICT (email) DO NOTHING
+        """)
 
-    # Make tenant_id non-nullable and add foreign key
-    op.alter_column('jobs', 'tenant_id', nullable=False)
-    op.create_index('ix_jobs_tenant_id', 'jobs', ['tenant_id'])
-    op.create_foreign_key('fk_jobs_tenant_id', 'jobs', 'users', ['tenant_id'], ['tenant_id'], ondelete='CASCADE')
+        # Update existing jobs with the default tenant_id
+        op.execute(f"UPDATE jobs SET tenant_id = '{default_tenant_id}' WHERE tenant_id IS NULL")
 
-    # 4. Add tenant_id to candidates table
-    op.add_column('candidates', sa.Column('tenant_id', postgresql.UUID(as_uuid=True), nullable=True))
-    op.execute(f"UPDATE candidates SET tenant_id = '{default_tenant_id}' WHERE tenant_id IS NULL")
-    op.alter_column('candidates', 'tenant_id', nullable=False)
-    op.create_index('ix_candidates_tenant_id', 'candidates', ['tenant_id'])
-    op.create_foreign_key('fk_candidates_tenant_id', 'candidates', 'users', ['tenant_id'], ['tenant_id'], ondelete='CASCADE')
+        # Make tenant_id non-nullable and add foreign key
+        op.alter_column('jobs', 'tenant_id', nullable=False)
+        op.create_index('ix_jobs_tenant_id', 'jobs', ['tenant_id'])
+        op.create_foreign_key('fk_jobs_tenant_id', 'jobs', 'users', ['tenant_id'], ['tenant_id'], ondelete='CASCADE')
 
-    # 5. Add tenant_id to evaluations table
-    op.add_column('evaluations', sa.Column('tenant_id', postgresql.UUID(as_uuid=True), nullable=True))
-    op.execute(f"UPDATE evaluations SET tenant_id = '{default_tenant_id}' WHERE tenant_id IS NULL")
-    op.alter_column('evaluations', 'tenant_id', nullable=False)
-    op.create_index('ix_evaluations_tenant_id', 'evaluations', ['tenant_id'])
-    op.create_foreign_key('fk_evaluations_tenant_id', 'evaluations', 'users', ['tenant_id'], ['tenant_id'], ondelete='CASCADE')
+    # 4. Add tenant_id to candidates table if it doesn't exist
+    columns = [col['name'] for col in inspector.get_columns('candidates')]
+
+    if 'tenant_id' not in columns:
+        op.add_column('candidates', sa.Column('tenant_id', postgresql.UUID(as_uuid=True), nullable=True))
+
+        # Get the default tenant_id from the legacy user if it exists
+        result = conn.execute(sa.text("SELECT tenant_id FROM users WHERE email = 'legacy@starscreen.internal'")).fetchone()
+        if result:
+            default_tenant_id = result[0]
+            op.execute(f"UPDATE candidates SET tenant_id = '{default_tenant_id}' WHERE tenant_id IS NULL")
+
+        op.alter_column('candidates', 'tenant_id', nullable=False)
+        op.create_index('ix_candidates_tenant_id', 'candidates', ['tenant_id'])
+        op.create_foreign_key('fk_candidates_tenant_id', 'candidates', 'users', ['tenant_id'], ['tenant_id'], ondelete='CASCADE')
+
+    # 5. Add tenant_id to evaluations table if it doesn't exist
+    columns = [col['name'] for col in inspector.get_columns('evaluations')]
+
+    if 'tenant_id' not in columns:
+        op.add_column('evaluations', sa.Column('tenant_id', postgresql.UUID(as_uuid=True), nullable=True))
+
+        # Get the default tenant_id from the legacy user if it exists
+        result = conn.execute(sa.text("SELECT tenant_id FROM users WHERE email = 'legacy@starscreen.internal'")).fetchone()
+        if result:
+            default_tenant_id = result[0]
+            op.execute(f"UPDATE evaluations SET tenant_id = '{default_tenant_id}' WHERE tenant_id IS NULL")
+
+        op.alter_column('evaluations', 'tenant_id', nullable=False)
+        op.create_index('ix_evaluations_tenant_id', 'evaluations', ['tenant_id'])
+        op.create_foreign_key('fk_evaluations_tenant_id', 'evaluations', 'users', ['tenant_id'], ['tenant_id'], ondelete='CASCADE')
 
 
 def downgrade() -> None:
