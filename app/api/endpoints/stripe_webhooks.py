@@ -205,7 +205,13 @@ def handle_subscription_updated(db: Session, stripe_sub: dict):
 
 
 def handle_subscription_deleted(db: Session, stripe_sub: dict):
-    """Handle subscription cancellation."""
+    """
+    Handle subscription cancellation - revert user to FREE tier.
+
+    When a user cancels their Stripe subscription (immediately or at period end),
+    this webhook automatically reverts them to the FREE tier so they can continue
+    using the product with limited features instead of being locked out.
+    """
     stripe_subscription_id = stripe_sub["id"]
 
     subscription = db.query(Subscription).filter(
@@ -216,9 +222,20 @@ def handle_subscription_deleted(db: Session, stripe_sub: dict):
         logger.warning(f"No subscription found for Stripe subscription {stripe_subscription_id}")
         return
 
-    subscription.status = SubscriptionStatus.CANCELED
+    # Revert to FREE tier instead of just marking as CANCELED
+    subscription.plan = SubscriptionPlan.FREE
+    subscription.status = SubscriptionStatus.ACTIVE
+    subscription.monthly_candidate_limit = settings.FREE_TIER_CANDIDATE_LIMIT
+    subscription.stripe_subscription_id = None  # No longer tied to Stripe
+    subscription.stripe_customer_id = None  # Clear Stripe customer association
+    subscription.candidates_used_this_month = 0  # Reset usage counter
+
+    # Clear period dates since FREE tier has no billing period
+    subscription.current_period_start = None
+    subscription.current_period_end = None
+
     db.commit()
-    logger.info(f"Subscription canceled: {stripe_subscription_id}")
+    logger.info(f"Subscription canceled: {stripe_subscription_id} - User reverted to FREE tier ({settings.FREE_TIER_CANDIDATE_LIMIT} candidates/month)")
 
 
 def handle_payment_succeeded(db: Session, invoice: dict):

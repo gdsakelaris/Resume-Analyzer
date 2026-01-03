@@ -176,6 +176,16 @@
                                         </svg>
                                         Manage Billing
                                     </a>
+                                    <!-- Cancel Subscription (only show if user has paid plan) -->
+                                    <template x-if="subscription && subscription.plan !== 'free' && subscription.plan !== 'starter'">
+                                        <button @click="cancelSubscription()"
+                                                class="w-full flex items-center gap-3 px-4 py-2 text-sm text-orange-600 hover:bg-orange-50">
+                                            <svg class="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                            </svg>
+                                            Cancel Subscription
+                                        </button>
+                                    </template>
                                     <button onclick="deleteAccount()"
                                             class="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50">
                                         <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1368,6 +1378,40 @@
                             console.error('Error loading subscription:', error);
                         } finally {
                             this.loading = false;
+                        }
+                    },
+
+                    async cancelSubscription() {
+                        // Confirm cancellation
+                        const confirmMessage = `Are you sure you want to cancel your ${this.subscription.plan_display} subscription?\n\n` +
+                            `Your subscription will remain active until the end of your billing period, then you'll be downgraded to the Free plan (10 candidates/month).\n\n` +
+                            `Click OK to proceed with cancellation.`;
+
+                        if (!confirm(confirmMessage)) {
+                            return;
+                        }
+
+                        try {
+                            const response = await Auth.fetch(`${API_BASE}/subscriptions/cancel`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                }
+                            });
+
+                            if (response.ok) {
+                                const data = await response.json();
+                                alert(`✅ Subscription canceled successfully!\n\n${data.message}\n\nYou'll be downgraded to the Free plan when your current period ends.`);
+
+                                // Reload subscription to reflect changes
+                                await this.loadSubscription();
+                            } else {
+                                const errorData = await response.json();
+                                alert(`❌ Failed to cancel subscription:\n\n${errorData.detail || 'Unknown error'}`);
+                            }
+                        } catch (error) {
+                            console.error('Error canceling subscription:', error);
+                            alert(`❌ Error canceling subscription:\n\n${error.message}`);
                         }
                     }
                 };
