@@ -106,7 +106,7 @@ def register(
         # Don't fail registration if email fails - user can request resend
 
     # Generate JWT tokens
-    access_token = create_access_token(data={"sub": str(new_user.id), "tenant_id": str(new_user.tenant_id)})
+    access_token = create_access_token(data={"sub": str(new_user.id), "tenant_id": str(new_user.tenant_id), "is_admin": new_user.is_admin})
     refresh_token = create_refresh_token(data={"sub": str(new_user.id)})
 
     return TokenResponse(
@@ -150,7 +150,7 @@ def login(
     logger.info(f"User logged in: {user.email}")
 
     # Generate JWT tokens
-    access_token = create_access_token(data={"sub": str(user.id), "tenant_id": str(user.tenant_id)})
+    access_token = create_access_token(data={"sub": str(user.id), "tenant_id": str(user.tenant_id), "is_admin": user.is_admin})
     refresh_token = create_refresh_token(data={"sub": str(user.id)})
 
     return TokenResponse(
@@ -192,7 +192,7 @@ def refresh_token(
             )
 
         # Generate new tokens
-        access_token = create_access_token(data={"sub": str(user.id), "tenant_id": str(user.tenant_id)})
+        access_token = create_access_token(data={"sub": str(user.id), "tenant_id": str(user.tenant_id), "is_admin": user.is_admin})
         refresh_token = create_refresh_token(data={"sub": str(user.id)})
 
         return TokenResponse(

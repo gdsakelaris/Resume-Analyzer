@@ -54,6 +54,7 @@ class UserResponse(BaseModel):
     company_name: Optional[str]
     is_active: bool
     is_verified: bool
+    is_admin: bool
     created_at: datetime
 
     class Config:
