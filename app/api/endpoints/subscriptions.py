@@ -376,8 +376,8 @@ async def upgrade_subscription(
         stripe_sub = stripe.Subscription.retrieve(subscription.stripe_subscription_id)
 
         # Determine if this is an upgrade or downgrade
-        current_price = subscription.plan.monthly_price
-        new_price = tier_config['plan'].monthly_price
+        current_price = subscription.plan.base_price_usd
+        new_price = tier_config['plan'].base_price_usd
         is_upgrade = new_price > current_price
 
         if is_upgrade:
