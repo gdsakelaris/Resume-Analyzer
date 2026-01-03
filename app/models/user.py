@@ -38,6 +38,7 @@ class User(Base):
     # Account status
     is_active = Column(Boolean, default=True, nullable=False)
     is_verified = Column(Boolean, default=False, nullable=False)  # Email verification
+    is_admin = Column(Boolean, default=False, nullable=False)  # Admin role for protected endpoints
 
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())

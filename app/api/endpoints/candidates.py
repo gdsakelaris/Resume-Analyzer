@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.deps import get_tenant_id, get_current_active_subscription
 from app.core.storage import storage  # S3/Local storage abstraction
+from app.core.api_rate_limiter import check_candidate_upload_rate_limit
 from app.models.candidate import Candidate, CandidateStatus
 from app.models.subscription import Subscription
 from app.schemas.candidate import CandidateUploadResponse, CandidateResponse, CandidateListResponse
@@ -80,6 +81,9 @@ async def upload_resume(
 
     # Derive tenant_id from the verified subscription
     tenant_id = subscription.user.tenant_id
+
+    # 0. CHECK RATE LIMIT (prevent API abuse and cost explosions)
+    check_candidate_upload_rate_limit(str(tenant_id))
 
     # 1. CHECK SUBSCRIPTION LIMIT (Priority check before file processing)
     if not subscription.can_upload_candidate:

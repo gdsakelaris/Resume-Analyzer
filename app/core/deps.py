@@ -169,7 +169,8 @@ async def get_optional_user(
 
         user = db.query(User).filter(User.id == UUID(user_id)).first()
         return user if user and user.is_active else None
-    except:
+    except (JWTError, ValueError, Exception):
+        # Log the error for debugging but don't expose details to client
         return None
 
 
@@ -189,3 +190,23 @@ def get_tenant_id_optional(
     # Fall back to legacy tenant for unauthenticated requests (development only)
     legacy_user = db.query(User).filter(User.email == "legacy@starscreen.internal").first()
     return legacy_user.tenant_id if legacy_user else None
+
+
+async def get_admin_user(
+    user: User = Depends(get_current_user)
+) -> User:
+    """
+    Verify that the current user has admin privileges.
+
+    This dependency should be used for ALL admin endpoints to enforce RBAC.
+
+    Raises:
+        HTTPException 403: If user is not an admin
+    """
+    if not user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin privileges required. This action is restricted to administrators."
+        )
+
+    return user

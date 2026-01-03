@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from app.core.database import get_db
+from app.core.deps import get_admin_user
 from app.models.user import User
 from app.models.job import Job
 from app.models.candidate import Candidate
@@ -22,16 +23,11 @@ router = APIRouter(prefix="/admin", tags=["Admin"])
 logger = logging.getLogger(__name__)
 
 
-# TODO: Add proper authentication/authorization middleware for admin routes
-# For now, these are unprotected - in production, add:
-# - JWT validation
-# - Role check (is_admin=True)
-# - Rate limiting
-# - Audit logging
-
-
 @router.get("/users")
-def list_all_users(db: Session = Depends(get_db)):
+def list_all_users(
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(get_admin_user)
+):
     """List all users in the system."""
     users = db.query(User).all()
     return [{
@@ -44,7 +40,11 @@ def list_all_users(db: Session = Depends(get_db)):
 
 
 @router.delete("/users/{user_id}")
-def delete_user(user_id: int, db: Session = Depends(get_db)):
+def delete_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(get_admin_user)
+):
     """
     Delete a user and all associated data (jobs, candidates, subscriptions).
 
@@ -62,7 +62,10 @@ def delete_user(user_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/subscriptions")
-def list_all_subscriptions(db: Session = Depends(get_db)):
+def list_all_subscriptions(
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(get_admin_user)
+):
     """List all subscriptions in the system."""
     subscriptions = db.query(Subscription).all()
     return [{
@@ -77,7 +80,11 @@ def list_all_subscriptions(db: Session = Depends(get_db)):
 
 
 @router.delete("/subscriptions/{subscription_id}")
-def delete_subscription(subscription_id: int, db: Session = Depends(get_db)):
+def delete_subscription(
+    subscription_id: int,
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(get_admin_user)
+):
     """Delete a subscription."""
     subscription = db.query(Subscription).filter(Subscription.id == subscription_id).first()
     if not subscription:
@@ -90,7 +97,11 @@ def delete_subscription(subscription_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/subscriptions/{subscription_id}/reset-usage")
-def reset_subscription_usage(subscription_id: int, db: Session = Depends(get_db)):
+def reset_subscription_usage(
+    subscription_id: int,
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(get_admin_user)
+):
     """Reset the usage counter for a specific subscription."""
     subscription = db.query(Subscription).filter(Subscription.id == subscription_id).first()
     if not subscription:
@@ -103,7 +114,10 @@ def reset_subscription_usage(subscription_id: int, db: Session = Depends(get_db)
 
 
 @router.post("/subscriptions/reset-all-usage")
-def reset_all_subscription_usage(db: Session = Depends(get_db)):
+def reset_all_subscription_usage(
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(get_admin_user)
+):
     """Reset usage counters for ALL subscriptions."""
     count = db.query(Subscription).update({"candidates_used_this_month": 0})
     db.commit()
@@ -112,7 +126,10 @@ def reset_all_subscription_usage(db: Session = Depends(get_db)):
 
 
 @router.get("/jobs")
-def list_all_jobs(db: Session = Depends(get_db)):
+def list_all_jobs(
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(get_admin_user)
+):
     """List all jobs across all tenants."""
     jobs = db.query(Job).all()
     return [{
@@ -126,7 +143,11 @@ def list_all_jobs(db: Session = Depends(get_db)):
 
 
 @router.delete("/jobs/{job_id}")
-def delete_job(job_id: int, db: Session = Depends(get_db)):
+def delete_job(
+    job_id: int,
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(get_admin_user)
+):
     """Delete a job and all its candidates (cascade)."""
     job = db.query(Job).filter(Job.id == job_id).first()
     if not job:
@@ -151,7 +172,10 @@ def delete_job(job_id: int, db: Session = Depends(get_db)):
 
 
 @router.delete("/jobs/delete-all")
-def delete_all_jobs(db: Session = Depends(get_db)):
+def delete_all_jobs(
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(get_admin_user)
+):
     """
     DANGER: Delete ALL jobs and candidates from ALL tenants.
     Use with extreme caution!
@@ -174,7 +198,10 @@ def delete_all_jobs(db: Session = Depends(get_db)):
 
 
 @router.get("/candidates")
-def list_all_candidates(db: Session = Depends(get_db)):
+def list_all_candidates(
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(get_admin_user)
+):
     """List all candidates across all tenants."""
     candidates = db.query(Candidate).all()
     return [{
@@ -189,7 +216,11 @@ def list_all_candidates(db: Session = Depends(get_db)):
 
 
 @router.delete("/candidates/{candidate_id}")
-def delete_candidate_admin(candidate_id: int, db: Session = Depends(get_db)):
+def delete_candidate_admin(
+    candidate_id: int,
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(get_admin_user)
+):
     """
     Delete a candidate (admin version - bypasses tenant checks).
 
@@ -223,7 +254,10 @@ def delete_candidate_admin(candidate_id: int, db: Session = Depends(get_db)):
 
 
 @router.delete("/candidates/delete-all")
-def delete_all_candidates(db: Session = Depends(get_db)):
+def delete_all_candidates(
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(get_admin_user)
+):
     """
     DANGER: Delete ALL candidates from ALL tenants.
     Use with extreme caution!
@@ -249,7 +283,10 @@ def delete_all_candidates(db: Session = Depends(get_db)):
 
 
 @router.get("/evaluations")
-def list_all_evaluations(db: Session = Depends(get_db)):
+def list_all_evaluations(
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(get_admin_user)
+):
     """List all evaluations across all tenants."""
     evaluations = db.query(Evaluation).all()
     return [{
@@ -262,7 +299,11 @@ def list_all_evaluations(db: Session = Depends(get_db)):
 
 
 @router.delete("/evaluations/{evaluation_id}")
-def delete_evaluation(evaluation_id: int, db: Session = Depends(get_db)):
+def delete_evaluation(
+    evaluation_id: int,
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(get_admin_user)
+):
     """Delete an evaluation."""
     evaluation = db.query(Evaluation).filter(Evaluation.id == evaluation_id).first()
     if not evaluation:
@@ -275,7 +316,10 @@ def delete_evaluation(evaluation_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/stats")
-def get_system_stats(db: Session = Depends(get_db)):
+def get_system_stats(
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(get_admin_user)
+):
     """Get system-wide statistics."""
     return {
         "total_users": db.query(func.count(User.id)).scalar(),

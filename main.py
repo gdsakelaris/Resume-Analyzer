@@ -1,4 +1,3 @@
-import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -7,14 +6,16 @@ from contextlib import asynccontextmanager
 
 from app.core.config import settings
 from app.core.database import init_db
-from app.api.endpoints import jobs, candidates, auth, stripe_webhooks, subscriptions, verification, admin
+from app.core.logging_config import setup_logging, get_logger
+from app.api.endpoints import jobs, candidates, auth, stripe_webhooks, subscriptions, verification, admin, health
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+# Configure structured logging
+# Set json_logs=False for development, True for production
+setup_logging(
+    log_level=getattr(settings, "LOG_LEVEL", "INFO"),
+    json_logs=getattr(settings, "JSON_LOGS", False)
 )
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 @asynccontextmanager
@@ -56,6 +57,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 app.mount("/images", StaticFiles(directory="public/images"), name="images")
 
 # Include routers
+app.include_router(health.router, prefix=settings.API_V1_STR)  # Health checks (no prefix needed for /health)
 app.include_router(auth.router, prefix=settings.API_V1_STR)
 app.include_router(verification.router, prefix=settings.API_V1_STR)
 app.include_router(jobs.router, prefix=settings.API_V1_STR)
@@ -69,12 +71,6 @@ app.include_router(admin.router, prefix=settings.API_V1_STR)
 async def root():
     """Serve the web UI"""
     return FileResponse("static/index.html")
-
-
-@app.get("/health")
-async def health_check():
-    """Health check endpoint"""
-    return {"status": "healthy"}
 
 
 if __name__ == "__main__":
