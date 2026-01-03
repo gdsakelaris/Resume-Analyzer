@@ -1,13 +1,12 @@
 """
-AWS SES Email Service for sending verification emails.
+Resend Email Service for sending verification emails.
 
-Handles email formatting, template rendering, and AWS SES integration.
+Handles email formatting, template rendering, and Resend API integration.
 """
 
 import logging
 from typing import Optional
-import boto3
-from botocore.exceptions import ClientError, BotoCoreError
+import resend
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -15,24 +14,15 @@ logger = logging.getLogger(__name__)
 
 class EmailService:
     """
-    Service for sending emails via AWS SES.
+    Service for sending emails via Resend.
 
-    Supports both development (sandbox) and production modes.
+    Resend provides a modern, developer-friendly email API with excellent deliverability.
     """
 
     def __init__(self):
-        """Initialize AWS SES client"""
-        # Configure boto3 client
-        session_kwargs = {
-            'region_name': settings.AWS_REGION,
-        }
-
-        # Add credentials if provided (otherwise uses IAM role)
-        if settings.AWS_ACCESS_KEY_ID and settings.AWS_SECRET_ACCESS_KEY:
-            session_kwargs['aws_access_key_id'] = settings.AWS_ACCESS_KEY_ID
-            session_kwargs['aws_secret_access_key'] = settings.AWS_SECRET_ACCESS_KEY
-
-        self.ses_client = boto3.client('ses', **session_kwargs)
+        """Initialize Resend API client"""
+        # Set Resend API key
+        resend.api_key = settings.RESEND_API_KEY
 
     def send_verification_email(
         self,
@@ -41,7 +31,7 @@ class EmailService:
         user_name: Optional[str] = None
     ) -> bool:
         """
-        Send a verification code email to a user.
+        Send a verification code email to a user via Resend.
 
         Args:
             to_email: Recipient email address
@@ -51,49 +41,32 @@ class EmailService:
         Returns:
             bool: True if email sent successfully, False otherwise
         """
-        subject = "Verify Your Email - Resume Analyzer"
+        subject = "Verify Your Email - Starscreen"
 
         # Build HTML email body
         html_body = self._build_verification_html(verification_code, user_name)
-        text_body = self._build_verification_text(verification_code, user_name)
 
         try:
-            response = self.ses_client.send_email(
-                Source=f"{settings.AWS_SES_FROM_NAME} <{settings.AWS_SES_FROM_EMAIL}>",
-                Destination={'ToAddresses': [to_email]},
-                Message={
-                    'Subject': {'Data': subject, 'Charset': 'UTF-8'},
-                    'Body': {
-                        'Html': {'Data': html_body, 'Charset': 'UTF-8'},
-                        'Text': {'Data': text_body, 'Charset': 'UTF-8'}
-                    }
-                }
-            )
+            params = {
+                "from": f"{settings.RESEND_FROM_NAME} <{settings.RESEND_FROM_EMAIL}>",
+                "to": [to_email],
+                "subject": subject,
+                "html": html_body,
+            }
 
-            message_id = response.get('MessageId')
-            logger.info(f"Verification email sent to {to_email} (MessageId: {message_id})")
-            return True
+            response = resend.Emails.send(params)
 
-        except ClientError as e:
-            error_code = e.response['Error']['Code']
-            error_message = e.response['Error']['Message']
-            logger.error(f"AWS SES ClientError: {error_code} - {error_message}")
-
-            if error_code == 'MessageRejected':
-                logger.error(f"Email rejected: {error_message}")
-            elif error_code == 'MailFromDomainNotVerified':
-                logger.error("Sender email not verified in SES")
-            elif error_code == 'ConfigurationSetDoesNotExist':
-                logger.error("SES configuration set not found")
-
-            return False
-
-        except BotoCoreError as e:
-            logger.error(f"AWS BotoCoreError: {str(e)}")
-            return False
+            # Resend returns a dict with 'id' on success
+            if response and 'id' in response:
+                email_id = response['id']
+                logger.info(f"Verification email sent to {to_email} (Email ID: {email_id})")
+                return True
+            else:
+                logger.error(f"Unexpected Resend response: {response}")
+                return False
 
         except Exception as e:
-            logger.error(f"Unexpected error sending email: {str(e)}")
+            logger.error(f"Error sending email via Resend: {str(e)}")
             return False
 
     def _build_verification_html(self, code: str, user_name: Optional[str] = None) -> str:
@@ -138,12 +111,12 @@ class EmailService:
                                 {greeting}
                             </p>
                             <p style="margin: 0 0 30px 0; color: #666666; font-size: 16px; line-height: 1.5;">
-                                Thank you for signing up for Resume Analyzer! To complete your registration, please use the verification code below:
+                                Thank you for signing up for Starscreen! To complete your registration, please use the verification code below:
                             </p>
 
                             <!-- Verification Code -->
                             <div style="background-color: #f8f9fa; border-radius: 8px; padding: 30px; text-align: center; margin: 0 0 30px 0;">
-                                <div style="font-size: 36px; font-weight: 700; letter-spacing: 8px; color: #4F46E5; font-family: 'Courier New', monospace;">
+                                <div style="font-size: 36px; font-weight: 700; letter-spacing: 8px; color: #8b5cf6; font-family: 'Courier New', monospace;">
                                     {code}
                                 </div>
                             </div>
@@ -153,7 +126,7 @@ class EmailService:
                             </p>
 
                             <p style="margin: 0; color: #999999; font-size: 13px; line-height: 1.5;">
-                                If you didn't create an account with Resume Analyzer, you can safely ignore this email.
+                                If you didn't create an account with Starscreen, you can safely ignore this email.
                             </p>
                         </td>
                     </tr>
@@ -162,7 +135,7 @@ class EmailService:
                     <tr>
                         <td style="padding: 20px 40px; background-color: #f8f9fa; border-top: 1px solid #e5e7eb; border-radius: 0 0 8px 8px;">
                             <p style="margin: 0; color: #999999; font-size: 12px; text-align: center;">
-                                &copy; 2026 Resume Analyzer. All rights reserved.
+                                &copy; 2026 Starscreen. All rights reserved.
                             </p>
                         </td>
                     </tr>
@@ -174,37 +147,6 @@ class EmailService:
 </html>
 """
         return html
-
-    def _build_verification_text(self, code: str, user_name: Optional[str] = None) -> str:
-        """
-        Build plain text email body for verification code (fallback).
-
-        Args:
-            code: 6-digit verification code
-            user_name: Optional user name
-
-        Returns:
-            str: Plain text email content
-        """
-        greeting = f"Hi {user_name}," if user_name else "Hi there,"
-
-        text = f"""{greeting}
-
-Thank you for signing up for Resume Analyzer!
-
-To complete your registration, please use the verification code below:
-
-{code}
-
-This code will expire in 15 minutes.
-
-If you didn't create an account with Resume Analyzer, you can safely ignore this email.
-
----
-Resume Analyzer
-© 2026 All rights reserved.
-"""
-        return text
 
 
 # Singleton instance
