@@ -371,45 +371,77 @@ async def upgrade_subscription(
             detail=f"You are already on the {new_tier} plan"
         )
 
-    # Validate downgrade doesn't exceed current usage
-    if tier_config["limit"] < subscription.candidates_used_this_month:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Cannot downgrade to {new_tier}. You've already used {subscription.candidates_used_this_month} candidates this month, which exceeds the {tier_config['limit']} limit of the {new_tier} plan. Please wait until the next billing period."
-        )
-
     try:
         # Get current subscription from Stripe
         stripe_sub = stripe.Subscription.retrieve(subscription.stripe_subscription_id)
 
-        # Update subscription item with new price
-        updated_stripe_sub = stripe.Subscription.modify(
-            subscription.stripe_subscription_id,
-            items=[{
-                'id': stripe_sub['items']['data'][0].id,
-                'price': tier_config['price_id'],
-            }],
-            proration_behavior='always_invoice',
-        )
+        # Determine if this is an upgrade or downgrade
+        current_price = subscription.plan.monthly_price
+        new_price = tier_config['plan'].monthly_price
+        is_upgrade = new_price > current_price
 
-        # Update local database with new plan and limits
-        subscription.plan = tier_config['plan']
-        subscription.monthly_candidate_limit = tier_config['limit']
-        subscription.current_period_start = datetime.fromtimestamp(updated_stripe_sub.current_period_start)
-        subscription.current_period_end = datetime.fromtimestamp(updated_stripe_sub.current_period_end)
+        if is_upgrade:
+            # UPGRADE: Immediate change with prorated charge
+            updated_stripe_sub = stripe.Subscription.modify(
+                subscription.stripe_subscription_id,
+                items=[{
+                    'id': stripe_sub['items']['data'][0].id,
+                    'price': tier_config['price_id'],
+                }],
+                proration_behavior='always_invoice',  # Charge prorated difference immediately
+            )
 
-        db.commit()
-        db.refresh(subscription)
+            # Update local database immediately
+            subscription.plan = tier_config['plan']
+            subscription.monthly_candidate_limit = tier_config['limit']
+            subscription.current_period_start = datetime.fromtimestamp(updated_stripe_sub.current_period_start)
+            subscription.current_period_end = datetime.fromtimestamp(updated_stripe_sub.current_period_end)
 
-        logger.info(f"Upgraded subscription for user {current_user.id} to {new_tier} (limit: {tier_config['limit']})")
+            db.commit()
+            db.refresh(subscription)
 
-        return {
-            "message": f"Successfully changed to {new_tier} plan",
-            "status": "active",
-            "plan": subscription.plan.value,
-            "monthly_candidate_limit": subscription.monthly_candidate_limit,
-            "candidates_used_this_month": subscription.candidates_used_this_month
-        }
+            logger.info(f"Upgraded subscription for user {current_user.id} to {new_tier} (limit: {tier_config['limit']})")
+
+            return {
+                "message": f"Successfully upgraded to {new_tier} plan! You now have access to {tier_config['limit']} candidates per month.",
+                "status": "active",
+                "plan": subscription.plan.value,
+                "monthly_candidate_limit": subscription.monthly_candidate_limit,
+                "candidates_used_this_month": subscription.candidates_used_this_month
+            }
+        else:
+            # DOWNGRADE: Schedule change for end of current period
+            updated_stripe_sub = stripe.Subscription.modify(
+                subscription.stripe_subscription_id,
+                items=[{
+                    'id': stripe_sub['items']['data'][0].id,
+                    'price': tier_config['price_id'],
+                }],
+                proration_behavior='none',  # No proration for downgrades
+            )
+
+            # Note: Stripe changes the price immediately but we keep local DB at current tier
+            # The webhook will update our DB when the new period starts
+
+            db.commit()
+
+            logger.info(f"Scheduled downgrade for user {current_user.id} to {new_tier} at period end")
+
+            # Calculate period end date for user message
+            period_end_date = subscription.current_period_end.strftime('%B %d, %Y') if subscription.current_period_end else 'the end of your billing period'
+
+            return {
+                "message": f"Your plan will change to {new_tier} on {period_end_date}. You'll keep your current {subscription.plan.display_name} benefits until then.",
+                "status": "active",
+                "plan": subscription.plan.value,  # Keep current plan
+                "monthly_candidate_limit": subscription.monthly_candidate_limit,  # Keep current limit
+                "candidates_used_this_month": subscription.candidates_used_this_month,
+                "scheduled_change": {
+                    "new_plan": tier_config['plan'].value,
+                    "new_limit": tier_config['limit'],
+                    "effective_date": period_end_date
+                }
+            }
 
     except stripe.error.StripeError as e:
         logger.error(f"Stripe error upgrading subscription: {e}")
