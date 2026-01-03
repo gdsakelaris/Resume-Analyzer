@@ -1688,7 +1688,7 @@
                         try {
                             // Delete all selected candidates
                             const deletePromises = candidates.map(candidate =>
-                                fetch(`${API_BASE}/jobs/${this.selectedJob.id}/candidates/${candidate.id}`, {
+                                Auth.fetch(`${API_BASE}/jobs/${this.selectedJob.id}/candidates/${candidate.id}`, {
                                     method: 'DELETE'
                                 })
                             );
