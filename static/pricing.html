@@ -583,36 +583,13 @@
             }
 
             window.cancelSubscriptionGlobal = function() {
-                console.log('cancelSubscriptionGlobal called');
-                console.log('modalState is:', modalState);
-                if (modalState) {
-                    console.log('modalState exists, setting properties...');
-                    const message = `Are you sure you want to cancel your subscription?<br><br>` +
-                        `Your subscription will remain active until the end of your billing period, then you'll be downgraded to the <strong>Free plan</strong> (10 candidates/month).`;
-                    modalState.cancelSubModal.show = true;
-                    modalState.cancelSubModal.message = message;
-                    modalState.cancelSubModal.loading = false;
-                    console.log('Modal state after update:', modalState.cancelSubModal);
-                } else {
-                    console.error('modalState is null or undefined!');
-                }
+                console.log('cancelSubscriptionGlobal called - dispatching event');
+                window.dispatchEvent(new CustomEvent('open-cancel-subscription-modal'));
             };
 
             window.deleteAccount = function() {
-                console.log('deleteAccount called from global');
-                console.log('modalState is:', modalState);
-                console.log('modalState type:', typeof modalState);
-                if (modalState) {
-                    console.log('modalState exists, setting properties...');
-                    modalState.deleteAccountModal.show = true;
-                    modalState.deleteAccountModal.step = 1;
-                    modalState.deleteAccountModal.confirmText = '';
-                    modalState.deleteAccountModal.error = '';
-                    modalState.deleteAccountModal.loading = false;
-                    console.log('Modal state after update:', modalState.deleteAccountModal);
-                } else {
-                    console.error('modalState is null or undefined!');
-                }
+                console.log('deleteAccount called - dispatching event');
+                window.dispatchEvent(new CustomEvent('open-delete-account-modal'));
             };
 
             function cancelDeleteAccount() {
@@ -886,7 +863,9 @@
         </script>
 
         <!-- Confirmation Modals -->
-        <div x-data="confirmationModals()" x-cloak>
+        <div x-data="confirmationModals()" x-cloak
+             @open-delete-account-modal.window="deleteAccountModal.show = true; deleteAccountModal.step = 1; deleteAccountModal.confirmText = ''; deleteAccountModal.error = ''; deleteAccountModal.loading = false"
+             @open-cancel-subscription-modal.window="cancelSubModal.show = true; cancelSubModal.message = 'Are you sure you want to cancel your subscription?<br><br>Your subscription will remain active until the end of your billing period, then you\\'ll be downgraded to the <strong>Free plan</strong> (10 candidates/month).'; cancelSubModal.loading = false">
             <!-- Delete Account Modal -->
             <div x-show="deleteAccountModal.show"
                  class="fixed inset-0 z-50 overflow-y-auto"
