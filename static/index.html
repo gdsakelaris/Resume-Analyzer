@@ -1588,6 +1588,18 @@
                                 loading: false
                             };
                         }
+                    },
+
+                    deleteAccount() {
+                        if (modalState) {
+                            modalState.deleteAccountModal = {
+                                show: true,
+                                step: 1,
+                                confirmText: '',
+                                error: '',
+                                loading: false
+                            };
+                        }
                     }
                 };
             }
