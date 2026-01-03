@@ -1395,7 +1395,7 @@
              * Cancel subscription
              * Opens modal confirmation dialog
              */
-            function cancelSubscriptionGlobal() {
+            window.cancelSubscriptionGlobal = function() {
                 console.log('cancelSubscriptionGlobal called');
                 if (modalState) {
                     const message = `Are you sure you want to cancel your subscription?<br><br>` +
@@ -1407,13 +1407,13 @@
                         loading: false
                     };
                 }
-            }
+            };
 
             /**
              * Delete the current user's account
              * Opens modal confirmation dialog
              */
-            function deleteAccount() {
+            window.deleteAccount = function() {
                 console.log('deleteAccount called from global');
                 if (modalState) {
                     modalState.deleteAccountModal = {
@@ -1424,7 +1424,7 @@
                         loading: false
                     };
                 }
-            }
+            };
 
             /**
              * Cancel delete account process
