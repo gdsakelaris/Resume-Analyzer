@@ -948,10 +948,22 @@
                         const countBefore = this.candidates.length;
 
                         const response = await Auth.fetch(`${API_BASE}/admin/candidates/${candidateId}`, { method: 'DELETE' });
+                        console.log('Response status:', response.status, response.statusText);
+
                         if (!response.ok) {
-                            const errorData = await response.json();
-                            throw new Error(errorData.detail || 'Failed to delete candidate');
+                            let errorMessage = 'Failed to delete candidate';
+                            try {
+                                const errorData = await response.json();
+                                errorMessage = errorData.detail || JSON.stringify(errorData);
+                                console.error('Error response:', errorData);
+                            } catch (e) {
+                                const errorText = await response.text();
+                                errorMessage = errorText || `HTTP ${response.status}: ${response.statusText}`;
+                                console.error('Error text:', errorText);
+                            }
+                            throw new Error(errorMessage);
                         }
+
                         const result = await response.json();
                         console.log('Delete response:', result);
 
@@ -970,7 +982,8 @@
                         }
                     } catch (error) {
                         console.error('Delete error:', error);
-                        alert('❌ Error deleting candidate: ' + error.message);
+                        const errorMsg = error.message || error.toString() || 'Unknown error';
+                        alert('❌ Error deleting candidate: ' + errorMsg);
                     }
                 },
 
