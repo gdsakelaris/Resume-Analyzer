@@ -40,6 +40,7 @@ class SubscriptionResponse(BaseModel):
     monthly_candidate_limit: int
     candidates_used_this_month: int
     remaining_candidates: int
+    usage_percentage: float
     current_period_end: Optional[int]
 
 
@@ -240,6 +241,7 @@ async def get_current_subscription(
         "monthly_candidate_limit": subscription.monthly_candidate_limit,
         "candidates_used_this_month": subscription.candidates_used_this_month,
         "remaining_candidates": subscription.remaining_candidates,
+        "usage_percentage": subscription.usage_percentage,
         "current_period_end": subscription.current_period_end
     }
 
