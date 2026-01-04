@@ -43,6 +43,7 @@ class Evaluation(Base):
     summary = Column(Text, nullable=False)  # Executive summary
     pros = Column(JSONB, nullable=True)     # List of strengths
     cons = Column(JSONB, nullable=True)     # List of gaps/weaknesses
+    interview_questions = Column(JSONB, nullable=True)  # List of suggested interview questions
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 

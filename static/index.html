@@ -765,6 +765,26 @@
                                             </template>
                                         </div>
                                     </div>
+
+                                    <!-- Interview Questions Section -->
+                                    <div x-show="candidateDetail.evaluation?.interview_questions && candidateDetail.evaluation.interview_questions.length > 0" class="mt-4">
+                                        <h4 class="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-1">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                            </svg>
+                                            Potential Interview Questions
+                                        </h4>
+                                        <div class="space-y-2">
+                                            <template x-for="(question, index) in candidateDetail.evaluation.interview_questions" :key="index">
+                                                <div class="bg-blue-50 rounded-lg p-3 border border-blue-100">
+                                                    <div class="flex items-start gap-2">
+                                                        <span class="text-blue-600 font-semibold text-sm mt-0.5" x-text="`${index + 1}.`"></span>
+                                                        <p class="text-sm text-slate-700 leading-relaxed" x-text="question"></p>
+                                                    </div>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </div>
                                 </div>
                             </template>
 

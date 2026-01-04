@@ -613,6 +613,7 @@ def get_candidate_evaluation(
         "summary": evaluation.summary,
         "pros": evaluation.pros,
         "cons": evaluation.cons,
+        "interview_questions": evaluation.interview_questions,
         "created_at": evaluation.created_at
     }
 

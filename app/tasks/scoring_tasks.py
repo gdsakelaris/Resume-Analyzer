@@ -146,10 +146,15 @@ Output strictly valid JSON:
         }}
     }},
     "pros": ["Detailed strength 1 (1-2 sentences)", "Detailed strength 2 (1-2 sentences)", "Detailed strength 3 (1-2 sentences)"],
-    "cons": ["Detailed observation 1 (1-2 sentences)", "Detailed observation 2 (1-2 sentences)"]
+    "cons": ["Detailed observation 1 (1-2 sentences)", "Detailed observation 2 (1-2 sentences)", "Detailed observation 3 (1-2 sentences)"],
+    "interview_questions": ["Interview question 1 based on resume and job requirements", "Interview question 2 based on resume and job requirements", "Interview question 3 based on resume and job requirements"]
 }}
 
-IMPORTANT: Do NOT include a "match_score" field. Python will calculate that.
+IMPORTANT:
+- You MUST provide at least 3 pros (strengths)
+- You MUST provide at least 3 cons (areas for consideration)
+- You MUST provide exactly 3 interview questions that probe areas where the resume and job description intersect or where there are gaps
+- Do NOT include a "match_score" field. Python will calculate that.
 """
 
         # Call OpenAI
@@ -285,7 +290,8 @@ IMPORTANT: Do NOT include a "match_score" field. Python will calculate that.
             category_scores=ai_result["category_scores"],  # AI's grades + reasoning
             summary=ai_result["summary"],
             pros=ai_result["pros"],
-            cons=ai_result["cons"]
+            cons=ai_result["cons"],
+            interview_questions=ai_result.get("interview_questions", [])  # AI-generated interview questions
         )
         db.add(evaluation)
 
