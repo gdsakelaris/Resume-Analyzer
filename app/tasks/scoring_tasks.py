@@ -161,7 +161,8 @@ IMPORTANT: Do NOT include a "match_score" field. Python will calculate that.
                 {"role": "user", "content": prompt}
             ],
             response_format={"type": "json_object"},
-            temperature=0.0  # Deterministic grading
+            temperature=0.0,  # Deterministic grading
+            seed=42  # Fixed seed for reproducible outputs
         )
 
         # Parse AI response
