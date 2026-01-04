@@ -83,6 +83,9 @@ class Settings(BaseSettings):
     RESEND_FROM_EMAIL: str = "noreply@yourdomain.com"   # Verified sender email in Resend
     RESEND_FROM_NAME: str = "Starscreen"                # Sender display name
 
+    # Support Email Settings
+    SUPPORT_FORWARD_EMAIL: str = "admin@yourdomain.com"  # Where to forward support@starscreen.net emails
+
     # Free Tier Settings
     FREE_TIER_CANDIDATE_LIMIT: int = 10         # Monthly candidate limit for free tier
 
