@@ -42,16 +42,11 @@ try {
 Write-Host ""
 Write-Host "3. Testing SSH connectivity..."
 if (Test-Path $SSH_KEY) {
-    try {
-        $sshTest = ssh -i $SSH_KEY -o ConnectTimeout=10 -o StrictHostKeyChecking=no ubuntu@$INSTANCE_IP 'echo "SSH works"' 2>&1
-        if ($sshTest -match "SSH works") {
-            Write-Host "   ✓ SSH connection successful" -ForegroundColor Green
-            $SSH_WORKS = $true
-        } else {
-            Write-Host "   ✗ SSH connection failed" -ForegroundColor Red
-            $SSH_WORKS = $false
-        }
-    } catch {
+    $sshResult = & ssh -i $SSH_KEY -o ConnectTimeout=10 -o StrictHostKeyChecking=no ubuntu@$INSTANCE_IP "echo 'SSH works'" 2>&1
+    if ($sshResult -match "SSH works") {
+        Write-Host "   ✓ SSH connection successful" -ForegroundColor Green
+        $SSH_WORKS = $true
+    } else {
         Write-Host "   ✗ SSH connection failed" -ForegroundColor Red
         $SSH_WORKS = $false
     }
@@ -69,23 +64,23 @@ if ($SSH_WORKS) {
 
     Write-Host ""
     Write-Host "4. Checking Docker containers status..."
-    ssh -i $SSH_KEY -o ConnectTimeout=10 -o StrictHostKeyChecking=no ubuntu@$INSTANCE_IP "cd ~/Resume-Analyzer && docker-compose ps" 2>$null
+    & ssh -i $SSH_KEY -o ConnectTimeout=10 -o StrictHostKeyChecking=no ubuntu@$INSTANCE_IP "cd ~/Resume-Analyzer && docker-compose ps" 2>$null
 
     Write-Host ""
     Write-Host "5. Checking disk space..."
-    ssh -i $SSH_KEY -o ConnectTimeout=10 -o StrictHostKeyChecking=no ubuntu@$INSTANCE_IP "df -h /" 2>$null
+    & ssh -i $SSH_KEY -o ConnectTimeout=10 -o StrictHostKeyChecking=no ubuntu@$INSTANCE_IP "df -h /" 2>$null
 
     Write-Host ""
     Write-Host "6. Checking memory usage..."
-    ssh -i $SSH_KEY -o ConnectTimeout=10 -o StrictHostKeyChecking=no ubuntu@$INSTANCE_IP "free -h" 2>$null
+    & ssh -i $SSH_KEY -o ConnectTimeout=10 -o StrictHostKeyChecking=no ubuntu@$INSTANCE_IP "free -h" 2>$null
 
     Write-Host ""
     Write-Host "7. Recent API logs (last 20 lines)..."
-    ssh -i $SSH_KEY -o ConnectTimeout=10 -o StrictHostKeyChecking=no ubuntu@$INSTANCE_IP "cd ~/Resume-Analyzer && docker-compose logs --tail=20 api" 2>$null
+    & ssh -i $SSH_KEY -o ConnectTimeout=10 -o StrictHostKeyChecking=no ubuntu@$INSTANCE_IP "cd ~/Resume-Analyzer && docker-compose logs --tail=20 api" 2>$null
 
     Write-Host ""
     Write-Host "8. Container resource usage..."
-    ssh -i $SSH_KEY -o ConnectTimeout=10 -o StrictHostKeyChecking=no ubuntu@$INSTANCE_IP "docker stats --no-stream" 2>$null
+    & ssh -i $SSH_KEY -o ConnectTimeout=10 -o StrictHostKeyChecking=no ubuntu@$INSTANCE_IP "docker stats --no-stream" 2>$null
 } else {
     Write-Host ""
     Write-Host "========================================" -ForegroundColor Yellow

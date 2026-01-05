@@ -42,15 +42,11 @@ Write-Host ""
 Write-Host "3. Testing SSH connection..."
 $SSH_KEY = "C:\Users\gdsak\OneDrive\Desktop\starsceen_key.pem"
 if (Test-Path $SSH_KEY) {
-    try {
-        $sshTest = ssh -i $SSH_KEY -o ConnectTimeout=10 -o StrictHostKeyChecking=no ubuntu@54.158.113.25 'echo "SSH works"' 2>&1 | Select-String -Pattern "SSH works"
-        if ($sshTest) {
-            Write-Host "   ✓ SSH works" -ForegroundColor Green
-        } else {
-            Write-Host "   ⊘ SSH connection issue" -ForegroundColor Yellow
-        }
-    } catch {
-        Write-Host "   ⊘ SSH not available" -ForegroundColor Yellow
+    $sshResult = & ssh -i $SSH_KEY -o ConnectTimeout=10 -o StrictHostKeyChecking=no ubuntu@54.158.113.25 "echo 'SSH works'" 2>&1
+    if ($sshResult -match "SSH works") {
+        Write-Host "   ✓ SSH works" -ForegroundColor Green
+    } else {
+        Write-Host "   ⊘ SSH connection issue" -ForegroundColor Yellow
     }
 } else {
     Write-Host "   ⊘ SSH key not found" -ForegroundColor Yellow
