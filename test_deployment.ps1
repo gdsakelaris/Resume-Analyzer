@@ -21,6 +21,7 @@ try {
 # Test API health endpoint
 Write-Host ""
 Write-Host "2. Testing API health endpoint..."
+$HEALTHY = $false
 try {
     $health = Invoke-RestMethod -Uri "https://starscreen.net/api/v1/health/" -TimeoutSec 10 -ErrorAction Stop
     if ($health.status -eq "healthy") {
@@ -30,11 +31,9 @@ try {
     } else {
         Write-Host "   ✗ API health check failed" -ForegroundColor Red
         Write-Host "   Response: $($health | ConvertTo-Json -Compress)" -ForegroundColor Gray
-        $HEALTHY = $false
     }
 } catch {
     Write-Host "   ✗ API health check failed" -ForegroundColor Red
-    $HEALTHY = $false
 }
 
 # Test SSH connection
@@ -42,8 +41,9 @@ Write-Host ""
 Write-Host "3. Testing SSH connection..."
 $SSH_KEY = "C:\Users\gdsak\OneDrive\Desktop\starsceen_key.pem"
 if (Test-Path $SSH_KEY) {
-    $sshResult = & ssh -i $SSH_KEY -o ConnectTimeout=10 -o StrictHostKeyChecking=no ubuntu@54.158.113.25 "echo 'SSH works'" 2>&1
-    if ($sshResult -match "SSH works") {
+    $sshCmd = "ssh -i `"$SSH_KEY`" -o ConnectTimeout=10 -o StrictHostKeyChecking=no ubuntu@54.158.113.25 `"echo SSH_WORKS`" 2>&1"
+    $sshResult = Invoke-Expression $sshCmd
+    if ($sshResult -match "SSH_WORKS") {
         Write-Host "   ✓ SSH works" -ForegroundColor Green
     } else {
         Write-Host "   ⊘ SSH connection issue" -ForegroundColor Yellow
