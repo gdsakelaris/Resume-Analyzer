@@ -116,8 +116,8 @@ bash local_create_alarms.sh
 | Script | Run Where | Purpose | When to Use |
 |--------|-----------|---------|-------------|
 | `check_local_health.sh` | EC2 | Quick local health check | SSH'd into server |
-| `test_deployment.sh` / `.ps1` | Local | Quick deployment test | After pushing code |
-| `check_deployment.sh` / `.ps1` | Local | Detailed diagnostics | Troubleshooting issues |
+| `test_deployment.sh` / `.cmd` | Local | Quick deployment test | After pushing code |
+| `check_deployment.sh` | Local | Detailed diagnostics | Troubleshooting issues |
 | `ec2_install_cloudwatch.sh` | EC2 | Install monitoring agent | One-time setup |
 | `local_create_alarms.sh` | Local | Create CloudWatch alarms | One-time setup |
 
@@ -166,9 +166,10 @@ bash local_create_alarms.sh
 
 ✅ **Do run `check_local_health.sh` ON the EC2 instance** - it's optimized for local health checks
 
-💻 **Windows users**: Use PowerShell scripts (`.ps1`) if bash scripts fail due to WSL issues:
-   - `.\test_deployment.ps1` instead of `bash test_deployment.sh`
-   - `.\check_deployment.ps1` instead of `bash check_deployment.sh`
+💻 **Windows users**:
+   - **Recommended**: Use Git Bash - open Git Bash terminal and run `bash test_deployment.sh`
+   - **Alternative**: Use `test_deployment.cmd` for basic checks (double-click or run in CMD)
+   - **Best option**: SSH to EC2 and run `bash check_local_health.sh` there
 
 ---
 
