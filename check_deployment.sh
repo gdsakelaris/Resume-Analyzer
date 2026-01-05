@@ -4,7 +4,18 @@
 set +e  # Don't exit on errors - we want to see all diagnostics
 
 INSTANCE_IP="54.158.113.25"
-SSH_KEY="/home/ubuntu/starsceen_key.pem"
+
+# Auto-detect SSH key location (local vs EC2)
+if [ -f "starsceen_key.pem" ]; then
+    SSH_KEY="starsceen_key.pem"
+elif [ -f "/home/ubuntu/starsceen_key.pem" ]; then
+    SSH_KEY="/home/ubuntu/starsceen_key.pem"
+elif [ -f "C:/Users/gdsak/OneDrive/Desktop/starsceen_key.pem" ]; then
+    SSH_KEY="C:/Users/gdsak/OneDrive/Desktop/starsceen_key.pem"
+else
+    SSH_KEY="starsceen_key.pem"  # Default fallback
+fi
+
 SSH_OPTS="-o ConnectTimeout=10 -o StrictHostKeyChecking=no"
 
 echo "========================================"
@@ -14,10 +25,19 @@ echo ""
 
 # Test network connectivity first
 echo "1. Testing network connectivity to EC2..."
-if ping -n 1 -w 3000 $INSTANCE_IP > /dev/null 2>&1; then
+# Detect OS for ping command (Windows uses -n, Linux uses -c)
+if [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "win32" ]]; then
+    # Windows
+    PING_RESULT=$(ping -n 1 -w 3000 $INSTANCE_IP 2>&1 | grep -i "reply\|time" || echo "failed")
+else
+    # Linux/Mac
+    PING_RESULT=$(ping -c 1 -W 3 $INSTANCE_IP 2>&1 | grep -i "time=" || echo "failed")
+fi
+
+if [[ $PING_RESULT != "failed" ]]; then
     echo "   ✓ Network reachable"
 else
-    echo "   ✗ Cannot ping EC2 (may be blocked by firewall)"
+    echo "   ⊘ Cannot ping EC2 (may be blocked by firewall - this is normal)"
 fi
 
 # Test SSH connectivity
