@@ -41,8 +41,8 @@ Write-Host ""
 Write-Host "3. Testing SSH connection..."
 $SSH_KEY = "C:\Users\gdsak\OneDrive\Desktop\starsceen_key.pem"
 if (Test-Path $SSH_KEY) {
-    $sshCmd = "ssh -i `"$SSH_KEY`" -o ConnectTimeout=10 -o StrictHostKeyChecking=no ubuntu@54.158.113.25 `"echo SSH_WORKS`" 2>&1"
-    $sshResult = Invoke-Expression $sshCmd
+    $sshCmd = "ssh -i `"$SSH_KEY`" -o ConnectTimeout=10 -o StrictHostKeyChecking=no ubuntu@54.158.113.25 `"echo SSH_WORKS`""
+    $sshResult = Invoke-Expression $sshCmd 2>&1
     if ($sshResult -match "SSH_WORKS") {
         Write-Host "   ✓ SSH works" -ForegroundColor Green
     } else {
