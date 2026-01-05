@@ -27,6 +27,9 @@ jobs:
         script_stop: true
         script: |
           cd ~/Resume-Analyzer
+
+          # Reset any local changes and pull latest
+          git reset --hard HEAD
           git pull origin main
 
           # Rebuild and restart all containers (picks up all changes)
