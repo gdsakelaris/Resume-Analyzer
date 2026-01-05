@@ -32,27 +32,42 @@ The EC2 instance was running but completely unresponsive, likely due to:
 
 ## Setting Up CloudWatch Monitoring
 
-To prevent this from happening again, set up CloudWatch monitoring:
+To prevent this from happening again, set up CloudWatch monitoring in two steps:
 
 ### Quick Setup (Recommended)
 
-```bash
-# Make script executable
-chmod +x setup_cloudwatch.sh
+**Step 1: Install CloudWatch Agent ON your EC2 instance**
 
-# Run the setup script
-bash setup_cloudwatch.sh
+```bash
+# SSH to your EC2
+ssh starscreen
+
+# Navigate to project directory
+cd ~/Resume-Analyzer
+
+# Pull latest scripts
+git pull
+
+# Run installation script
+bash ec2_install_cloudwatch.sh
 ```
 
-This script will:
-1. Create SNS topic for email alerts
-2. Subscribe your email to receive alerts
-3. Create CloudWatch alarms for:
-   - CPU usage >80%
-   - Instance status check failures
-   - Disk usage >80% (requires CloudWatch Agent)
-   - Memory usage >80% (requires CloudWatch Agent)
-4. Install CloudWatch Agent on EC2 (optional)
+This installs the CloudWatch Agent to collect disk, memory, and log metrics.
+
+**Step 2: Create CloudWatch Alarms FROM your local machine**
+
+```bash
+# On your local machine (requires AWS CLI configured)
+bash local_create_alarms.sh
+```
+
+This creates email alerts for:
+- CPU usage >80%
+- Instance status check failures
+- Disk usage >80%
+- Memory usage >80%
+
+**Total time**: ~5 minutes
 
 ### Manual Setup
 
