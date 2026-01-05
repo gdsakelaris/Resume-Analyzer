@@ -4,7 +4,7 @@
 set +e  # Don't exit on errors - we want to see all diagnostics
 
 INSTANCE_IP="54.158.113.25"
-SSH_KEY="starsceen_key.pem"
+SSH_KEY="/home/ubuntu/starsceen_key.pem"
 SSH_OPTS="-o ConnectTimeout=10 -o StrictHostKeyChecking=no"
 
 echo "========================================"
