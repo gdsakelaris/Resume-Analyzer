@@ -25,19 +25,19 @@ fi
 
 echo ""
 echo "3. Testing SSH connection (from local machine only)..."
-if [ -f "starsceen_key.pem" ]; then
+if [ -f "/home/ubuntu//home/ubuntu/starsceen_key.pem" ]; then
     # Fix permissions if on Linux/Mac
-    chmod 400 starsceen_key.pem 2>/dev/null || echo "   (Skip permission fix on Windows)"
+    chmod 400 /home/ubuntu/starsceen_key.pem 2>/dev/null || echo "   (Skip permission fix on Windows)"
 
-    ssh -i "starsceen_key.pem" -o ConnectTimeout=10 -o StrictHostKeyChecking=no ubuntu@54.158.113.25 'echo "✓ SSH works"' 2>&1 | grep -v "Warning" | grep -v "@@@" | grep -v "UNPROTECTED"
+    ssh -i "/home/ubuntu/starsceen_key.pem" -o ConnectTimeout=10 -o StrictHostKeyChecking=no ubuntu@54.158.113.25 'echo "✓ SSH works"' 2>&1 | grep -v "Warning" | grep -v "@@@" | grep -v "UNPROTECTED"
 else
     echo "   ⊘ SSH key not found (run this from project root)"
 fi
 
 echo ""
 echo "4. Testing Docker containers (via SSH)..."
-if [ -f "starsceen_key.pem" ]; then
-    ssh -i "starsceen_key.pem" -o ConnectTimeout=10 -o StrictHostKeyChecking=no ubuntu@54.158.113.25 'cd ~/Resume-Analyzer && docker-compose ps' 2>/dev/null | grep -E "Name|api|worker|db|redis" || echo "   ✗ Cannot check containers"
+if [ -f "/home/ubuntu/starsceen_key.pem" ]; then
+    ssh -i "/home/ubuntu/starsceen_key.pem" -o ConnectTimeout=10 -o StrictHostKeyChecking=no ubuntu@54.158.113.25 'cd ~/Resume-Analyzer && docker-compose ps' 2>/dev/null | grep -E "Name|api|worker|db|redis" || echo "   ✗ Cannot check containers"
 else
     echo "   ⊘ Skipped (no SSH key)"
 fi
