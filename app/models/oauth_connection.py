@@ -64,7 +64,7 @@ class OAuthConnection(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships
-    user = relationship("User", back_populates="oauth_connections")
+    user = relationship("User", back_populates="oauth_connections", foreign_keys=[user_id])
 
     # Indexes and constraints
     __table_args__ = (
