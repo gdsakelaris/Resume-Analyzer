@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 from app.core.config import settings
 from app.core.database import init_db
 from app.core.logging_config import setup_logging, get_logger
-from app.api.endpoints import jobs, candidates, auth, stripe_webhooks, resend_webhooks, subscriptions, verification, admin, health
+from app.api.endpoints import jobs, candidates, auth, stripe_webhooks, resend_webhooks, subscriptions, verification, admin, health, linkedin_oauth
 
 # Configure structured logging
 # Set json_logs=False for development, True for production
@@ -63,6 +63,7 @@ app.include_router(verification.router, prefix=settings.API_V1_STR)
 app.include_router(jobs.router, prefix=settings.API_V1_STR)
 app.include_router(candidates.router, prefix=settings.API_V1_STR)
 app.include_router(subscriptions.router, prefix=settings.API_V1_STR)
+app.include_router(linkedin_oauth.router, prefix=settings.API_V1_STR)
 app.include_router(stripe_webhooks.router, prefix=settings.API_V1_STR)
 app.include_router(resend_webhooks.router, prefix=settings.API_V1_STR)
 app.include_router(admin.router, prefix=settings.API_V1_STR)

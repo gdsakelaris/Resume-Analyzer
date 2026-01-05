@@ -6,8 +6,9 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.deps import get_tenant_id, get_current_active_subscription
-from app.models.subscription import Subscription
+from app.models.subscription import Subscription, SubscriptionPlan
 from app.crud import job as job_crud
+from app.crud import oauth_connection as oauth_crud
 from app.models.job import JobStatus
 from app.schemas.job import JobCreateRequest, JobUpdateRequest, JobResponse, JobCreateResponse, JobStatusEnum
 from app.tasks import job_tasks
@@ -43,18 +44,41 @@ def create_job(
         # Derive tenant_id from the verified subscription
         tenant_id = subscription.user.tenant_id
 
+        # Validate LinkedIn posting requirements if requested
+        if request.post_to_linkedin:
+            # Check subscription tier (FREE tier not allowed)
+            if subscription.plan == SubscriptionPlan.FREE:
+                raise HTTPException(
+                    status_code=403,
+                    detail="LinkedIn posting requires a paid subscription. Upgrade to Recruiter ($20/mo) or higher."
+                )
+
+            # Check if LinkedIn is connected
+            oauth_conn = oauth_crud.get_connection(db, subscription.user_id, "linkedin")
+            if not oauth_conn or not oauth_conn.is_active:
+                raise HTTPException(
+                    status_code=400,
+                    detail="LinkedIn account not connected. Please connect LinkedIn in Settings before posting jobs."
+                )
+
         # Create job using CRUD layer (with tenant_id)
         new_job = job_crud.create(db, request, tenant_id=tenant_id)
 
         # Queue task to Celery worker via Redis
         # .delay() sends task to Redis and returns immediately
-        task = job_tasks.generate_job_config_task.delay(
-            new_job.id,
-            new_job.title,
-            new_job.description
+        # Pass post_to_linkedin flag via kwargs for task chaining
+        task = job_tasks.generate_job_config_task.apply_async(
+            args=[new_job.id, new_job.title, new_job.description],
+            kwargs={
+                "post_to_linkedin": request.post_to_linkedin,
+                "tenant_id": str(tenant_id)
+            }
         )
 
-        logger.info(f"Created job {new_job.id}: {new_job.title} | Celery task {task.id} queued")
+        logger.info(
+            f"Created job {new_job.id}: {new_job.title} | Celery task {task.id} queued | "
+            f"LinkedIn posting: {request.post_to_linkedin}"
+        )
 
         return JobCreateResponse(
             job_id=new_job.id,
@@ -62,6 +86,9 @@ def create_job(
             message=f"Job created successfully. Task {task.id} queued to Celery worker via Redis."
         )
 
+    except HTTPException:
+        db.rollback()
+        raise  # Re-raise HTTP exceptions as-is
     except Exception as e:
         db.rollback()
         logger.error(f"Error creating job: {e}")

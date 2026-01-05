@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 @celery_app.task(name="app.tasks.job_tasks.generate_job_config_task", bind=True)
-def generate_job_config_task(self, job_id: int, title: str, description: str):
+def generate_job_config_task(self, job_id: int, title: str, description: str, post_to_linkedin: bool = False, tenant_id: str = None):
     """
     Celery task to generate AI job configuration.
 
@@ -29,11 +29,13 @@ def generate_job_config_task(self, job_id: int, title: str, description: str):
         job_id: The job ID to process
         title: Job title
         description: Job description
+        post_to_linkedin: Whether to post job to LinkedIn after config generation
+        tenant_id: Tenant ID for LinkedIn posting (optional)
 
     Returns:
         dict: The generated job configuration or error details
     """
-    logger.info(f"[Task {self.request.id}] Starting AI generation for Job {job_id}")
+    logger.info(f"[Task {self.request.id}] Starting AI generation for Job {job_id} | LinkedIn posting: {post_to_linkedin}")
 
     # Create a new database session for this task
     db = SessionLocal()
@@ -59,6 +61,13 @@ def generate_job_config_task(self, job_id: int, title: str, description: str):
         job_crud.update_config(db, job_id, config)
 
         logger.info(f"[Task {self.request.id}] Job {job_id} completed successfully")
+
+        # Chain LinkedIn posting task if requested
+        if post_to_linkedin and tenant_id:
+            from app.tasks.linkedin_tasks import post_job_to_linkedin
+            post_job_to_linkedin.delay(job_id, tenant_id)
+            logger.info(f"[Task {self.request.id}] Queued LinkedIn posting task for job {job_id}")
+
         return {"status": "success", "config": config}
 
     except JobConfigGenerationError as e:

@@ -86,6 +86,14 @@ class Settings(BaseSettings):
     # Support Email Settings
     SUPPORT_FORWARD_EMAIL: str = "admin@yourdomain.com"  # Where to forward support@starscreen.net emails
 
+    # LinkedIn Integration Settings
+    LINKEDIN_CLIENT_ID: str = ""                        # LinkedIn OAuth client ID
+    LINKEDIN_CLIENT_SECRET: str = ""                    # LinkedIn OAuth client secret
+    LINKEDIN_REDIRECT_URI: str = "http://localhost:8000/api/v1/linkedin/auth/callback"  # OAuth callback URL
+
+    # Token Encryption Settings (for OAuth tokens at rest)
+    ENCRYPTION_KEY: str = ""                            # 32-byte base64-encoded encryption key (use Fernet.generate_key())
+
     # Free Tier Settings
     FREE_TIER_CANDIDATE_LIMIT: int = 10         # Monthly candidate limit for free tier
 

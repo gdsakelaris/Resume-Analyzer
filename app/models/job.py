@@ -50,6 +50,7 @@ class Job(Base):
 
     # Relationships
     candidates = relationship("Candidate", back_populates="job", cascade="all, delete-orphan")
+    external_postings = relationship("ExternalJobPosting", back_populates="job", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<Job(id={self.id}, title='{self.title}', status={self.status.value})>"

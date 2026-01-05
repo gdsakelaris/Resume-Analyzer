@@ -42,6 +42,7 @@ class JobCreateRequest(BaseModel):
     description: str = Field(..., min_length=10, max_length=15000, description="Job description (max 15,000 characters)")
     location: Optional[str] = None
     work_authorization_required: bool = False
+    post_to_linkedin: bool = Field(False, description="Automatically post job to LinkedIn (requires paid subscription and LinkedIn connection)")
 
 
 class JobUpdateRequest(BaseModel):
@@ -50,6 +51,18 @@ class JobUpdateRequest(BaseModel):
     description: Optional[str] = Field(None, min_length=10, max_length=15000, description="Job description (max 15,000 characters)")
     location: Optional[str] = None
     work_authorization_required: Optional[bool] = None
+
+
+class ExternalPostingResponse(BaseModel):
+    """Schema for external job posting status"""
+    provider: str = Field(..., description="Job board provider (e.g., 'linkedin', 'indeed')")
+    status: str = Field(..., description="Posting status (pending, posting, active, failed, closed, expired)")
+    external_url: Optional[str] = Field(None, description="URL to job on external platform")
+    posted_at: Optional[datetime] = Field(None, description="When job was successfully posted")
+    error_message: Optional[str] = Field(None, description="Error message if posting failed")
+
+    class Config:
+        from_attributes = True
 
 
 class JobResponse(BaseModel):
@@ -62,6 +75,7 @@ class JobResponse(BaseModel):
     status: JobStatusEnum
     error_message: Optional[str] = None
     job_config: Optional[Dict] = None
+    external_postings: List[ExternalPostingResponse] = Field(default_factory=list, description="External job board postings")
     created_at: datetime
     updated_at: Optional[datetime] = None
 
