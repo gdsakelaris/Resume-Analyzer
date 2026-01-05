@@ -35,11 +35,11 @@ class LinkedInService(JobBoardService):
     TOKEN_URL = "https://www.linkedin.com/oauth/v2/accessToken"
     API_BASE = "https://api.linkedin.com/v2"
 
-    # OAuth scopes required for job posting
+    # OAuth scopes for sharing posts (available in standard LinkedIn apps)
     SCOPES = [
-        "w_organization_social",  # Post on behalf of organization
-        "r_organization_social",  # Read organization info
-        "rw_organization_admin"   # Manage job postings
+        "w_member_social",        # Share content as member (personal)
+        "r_basicprofile",         # Read basic profile info
+        "r_liteprofile"           # Read lite profile (name, photo)
     ]
 
     def __init__(self):
@@ -188,19 +188,44 @@ class LinkedInService(JobBoardService):
         buffer = timedelta(minutes=5)
         return datetime.utcnow() + buffer >= oauth_connection.token_expires_at
 
+    async def get_member_info(self, oauth_connection: OAuthConnection) -> Dict:
+        """
+        Get the authenticated member's LinkedIn profile info.
+
+        Returns:
+            Dict with member ID and profile data
+        """
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{self.API_BASE}/me",
+                headers={
+                    "Authorization": f"Bearer {oauth_connection.access_token}",
+                },
+                timeout=30.0
+            )
+
+            if response.status_code != 200:
+                logger.error(f"Failed to get member info: {response.text}")
+                raise JobPostingError(f"Failed to get member info: {response.text}")
+
+            return response.json()
+
     async def post_job(self, job: Job, oauth_connection: OAuthConnection) -> Tuple[str, str]:
         """
-        Post job to LinkedIn using simpleJobPostings API.
+        Share job to LinkedIn feed using UGC Posts API.
 
-        API Endpoint: POST https://api.linkedin.com/v2/simpleJobPostings
-        Documentation: https://learn.microsoft.com/en-us/linkedin/talent/job-postings/api/overview
+        NOTE: This shares the job as a LinkedIn post, NOT as a job listing.
+        Full job posting requires LinkedIn Talent Solutions partnership.
+
+        API Endpoint: POST https://api.linkedin.com/v2/ugcPosts
+        Documentation: https://learn.microsoft.com/en-us/linkedin/consumer/integrations/self-serve/share-on-linkedin
 
         Args:
             job: Job model instance with title, description, location
             oauth_connection: OAuth connection with valid access token
 
         Returns:
-            Tuple of (linkedin_job_id, job_url)
+            Tuple of (linkedin_post_id, post_url)
 
         Raises:
             JobPostingError: If posting fails
@@ -211,25 +236,60 @@ class LinkedInService(JobBoardService):
             new_tokens = await self.refresh_token(oauth_connection)
             # Note: Caller should update tokens in database
 
-        # Build job posting payload
-        payload = {
-            "integrationContext": f"urn:li:organization:{oauth_connection.provider_data.get('organization_id', '')}",
-            "companyApplyUrl": f"{settings.FRONTEND_URL}/jobs/{job.id}/apply",
-            "description": job.description,
-            "employmentStatus": "FULL_TIME",  # Default, could be configurable
-            "externalJobPostingId": str(job.id),  # Our internal job ID
-            "listedAt": int(datetime.utcnow().timestamp() * 1000),
-            "jobPostingOperationType": "CREATE",
-            "title": job.title,
-        }
+        # Get member info to get person URN
+        member_info = await self.get_member_info(oauth_connection)
+        person_id = member_info.get("id")
+        if not person_id:
+            raise JobPostingError("Could not get member ID from LinkedIn")
 
-        # Add location if provided
-        if job.location:
-            payload["location"] = job.location
+        author_urn = f"urn:li:person:{person_id}"
+
+        # Build post content
+        apply_url = f"{settings.FRONTEND_URL}/jobs/{job.id}/apply"
+
+        # Create post text (max 3000 characters)
+        location_text = f"\n📍 Location: {job.location}" if job.location else ""
+        post_text = f"""🚀 New Job Opportunity: {job.title}
+
+{job.description[:500]}{"..." if len(job.description) > 500 else ""}{location_text}
+
+Apply now: {apply_url}
+
+#hiring #jobs #careers
+"""
+
+        # Build UGC post payload
+        payload = {
+            "author": author_urn,
+            "lifecycleState": "PUBLISHED",
+            "specificContent": {
+                "com.linkedin.ugc.ShareContent": {
+                    "shareCommentary": {
+                        "text": post_text
+                    },
+                    "shareMediaCategory": "ARTICLE",
+                    "media": [
+                        {
+                            "status": "READY",
+                            "description": {
+                                "text": f"Apply for {job.title}"
+                            },
+                            "originalUrl": apply_url,
+                            "title": {
+                                "text": job.title
+                            }
+                        }
+                    ]
+                }
+            },
+            "visibility": {
+                "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"
+            }
+        }
 
         async with httpx.AsyncClient() as client:
             response = await client.post(
-                f"{self.API_BASE}/simpleJobPostings",
+                f"{self.API_BASE}/ugcPosts",
                 json=payload,
                 headers={
                     "Authorization": f"Bearer {oauth_connection.access_token}",
@@ -245,11 +305,18 @@ class LinkedInService(JobBoardService):
                 raise JobPostingError(error_msg)
 
             result = response.json()
-            linkedin_job_id = result.get("id")
-            job_url = f"https://www.linkedin.com/jobs/view/{linkedin_job_id}"
+            post_id = result.get("id")
 
-            logger.info(f"Successfully posted job {job.id} to LinkedIn (ID: {linkedin_job_id})")
-            return linkedin_job_id, job_url
+            # Extract the activity ID for the URL
+            if post_id:
+                # Convert URN format to activity ID
+                activity_id = post_id.split(":")[-1] if ":" in post_id else post_id
+                post_url = f"https://www.linkedin.com/feed/update/{post_id}"
+            else:
+                post_url = "https://www.linkedin.com/feed/"
+
+            logger.info(f"Successfully shared job {job.id} to LinkedIn (Post ID: {post_id})")
+            return post_id or "shared", post_url
 
     async def close_job(self, external_job_id: str, oauth_connection: OAuthConnection) -> bool:
         """
