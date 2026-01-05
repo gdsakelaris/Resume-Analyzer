@@ -11,30 +11,42 @@ Write-Host ""
 
 # Test HTTPS endpoint
 Write-Host "1. Testing HTTPS endpoint..."
-try {
+try
+{
     $response = Invoke-WebRequest -Uri "https://starscreen.net" -TimeoutSec 10 -UseBasicParsing -ErrorAction Stop
     $statusCode = $response.StatusCode
-    if ($statusCode -in @(200, 307, 308, 405)) {
+    if ($statusCode -in @(200, 307, 308, 405))
+    {
         Write-Host "   ✓ Server is responding (HTTP $statusCode)" -ForegroundColor Green
-    } else {
+    }
+    else
+    {
         Write-Host "   ✗ Server not responding (HTTP $statusCode)" -ForegroundColor Red
     }
-} catch {
+}
+catch
+{
     Write-Host "   ✗ Server not responding" -ForegroundColor Red
 }
 
 # Test API health endpoint
 Write-Host ""
 Write-Host "2. Testing API health endpoint..."
-try {
+try
+{
     $health = Invoke-RestMethod -Uri "https://starscreen.net/api/v1/health/" -TimeoutSec 10 -ErrorAction Stop
-    if ($health.status -eq "healthy") {
+    if ($health.status -eq "healthy")
+    {
         Write-Host "   ✓ API is healthy" -ForegroundColor Green
         Write-Host "   Response: $($health | ConvertTo-Json -Compress)"
-    } else {
+    }
+    else
+    {
         Write-Host "   ✗ API health check failed" -ForegroundColor Red
     }
-} catch {
+}
+catch
+{
     Write-Host "   ✗ API not responding" -ForegroundColor Red
 }
 
@@ -42,21 +54,34 @@ try {
 Write-Host ""
 Write-Host "3. Testing SSH connectivity..."
 $SSH_WORKS = $false
-if (Test-Path $SSH_KEY) {
-    $sshCmd = "ssh -i `"$SSH_KEY`" -o ConnectTimeout=10 -o StrictHostKeyChecking=no ubuntu@$INSTANCE_IP `"echo SSH_WORKS`""
-    $sshResult = Invoke-Expression $sshCmd 2>&1
-    if ($sshResult -match "SSH_WORKS") {
-        Write-Host "   ✓ SSH connection successful" -ForegroundColor Green
-        $SSH_WORKS = $true
-    } else {
+if (Test-Path $SSH_KEY)
+{
+    try
+    {
+        $sshResult = & ssh -i $SSH_KEY -o ConnectTimeout=10 -o StrictHostKeyChecking=no ubuntu@$INSTANCE_IP "echo SSH_WORKS" 2>&1
+        if ($sshResult -match "SSH_WORKS")
+        {
+            Write-Host "   ✓ SSH connection successful" -ForegroundColor Green
+            $SSH_WORKS = $true
+        }
+        else
+        {
+            Write-Host "   ✗ SSH connection failed" -ForegroundColor Red
+        }
+    }
+    catch
+    {
         Write-Host "   ✗ SSH connection failed" -ForegroundColor Red
     }
-} else {
+}
+else
+{
     Write-Host "   ✗ SSH key not found at: $SSH_KEY" -ForegroundColor Red
 }
 
 # If SSH works, do detailed checks
-if ($SSH_WORKS) {
+if ($SSH_WORKS)
+{
     Write-Host ""
     Write-Host "========================================" -ForegroundColor Cyan
     Write-Host "EC2 Detailed Diagnostics" -ForegroundColor Cyan
@@ -64,29 +89,26 @@ if ($SSH_WORKS) {
 
     Write-Host ""
     Write-Host "4. Checking Docker containers status..."
-    $cmd = "ssh -i `"$SSH_KEY`" -o ConnectTimeout=10 -o StrictHostKeyChecking=no ubuntu@$INSTANCE_IP `"cd ~/Resume-Analyzer; docker-compose ps`""
-    Invoke-Expression $cmd 2>&1 | Out-Host
+    & ssh -i $SSH_KEY -o ConnectTimeout=10 -o StrictHostKeyChecking=no ubuntu@$INSTANCE_IP "cd ~/Resume-Analyzer; docker-compose ps" 2>&1
 
     Write-Host ""
     Write-Host "5. Checking disk space..."
-    $cmd = "ssh -i `"$SSH_KEY`" -o ConnectTimeout=10 -o StrictHostKeyChecking=no ubuntu@$INSTANCE_IP `"df -h /`""
-    Invoke-Expression $cmd 2>&1 | Out-Host
+    & ssh -i $SSH_KEY -o ConnectTimeout=10 -o StrictHostKeyChecking=no ubuntu@$INSTANCE_IP "df -h /" 2>&1
 
     Write-Host ""
     Write-Host "6. Checking memory usage..."
-    $cmd = "ssh -i `"$SSH_KEY`" -o ConnectTimeout=10 -o StrictHostKeyChecking=no ubuntu@$INSTANCE_IP `"free -h`""
-    Invoke-Expression $cmd 2>&1 | Out-Host
+    & ssh -i $SSH_KEY -o ConnectTimeout=10 -o StrictHostKeyChecking=no ubuntu@$INSTANCE_IP "free -h" 2>&1
 
     Write-Host ""
     Write-Host "7. Recent API logs (last 20 lines)..."
-    $cmd = "ssh -i `"$SSH_KEY`" -o ConnectTimeout=10 -o StrictHostKeyChecking=no ubuntu@$INSTANCE_IP `"cd ~/Resume-Analyzer; docker-compose logs --tail=20 api`""
-    Invoke-Expression $cmd 2>&1 | Out-Host
+    & ssh -i $SSH_KEY -o ConnectTimeout=10 -o StrictHostKeyChecking=no ubuntu@$INSTANCE_IP "cd ~/Resume-Analyzer; docker-compose logs --tail=20 api" 2>&1
 
     Write-Host ""
     Write-Host "8. Container resource usage..."
-    $cmd = "ssh -i `"$SSH_KEY`" -o ConnectTimeout=10 -o StrictHostKeyChecking=no ubuntu@$INSTANCE_IP `"docker stats --no-stream`""
-    Invoke-Expression $cmd 2>&1 | Out-Host
-} else {
+    & ssh -i $SSH_KEY -o ConnectTimeout=10 -o StrictHostKeyChecking=no ubuntu@$INSTANCE_IP "docker stats --no-stream" 2>&1
+}
+else
+{
     Write-Host ""
     Write-Host "========================================" -ForegroundColor Yellow
     Write-Host "⚠️  Cannot SSH to EC2" -ForegroundColor Yellow
