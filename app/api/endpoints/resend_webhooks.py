@@ -7,6 +7,7 @@ Forwards emails to admin email and optionally stores for tracking.
 
 import logging
 import resend
+import httpx
 from fastapi import APIRouter, Request, HTTPException
 from typing import Dict, Any
 import hmac
@@ -75,8 +76,15 @@ async def handle_email_received(payload: Dict[str, Any]):
     # Fetch full email content (body, HTML, attachments) via Resend API
     # Note: Webhooks only include metadata - you must fetch the content separately
     try:
-        # Get email content using Resend Receiving API (not the sent emails API)
-        email_content = resend.emails.receiving.get(email_id)
+        # Get email content using Resend Receiving API via direct HTTP request
+        # The Python SDK doesn't support the receiving API yet, so we make a raw HTTP call
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"https://api.resend.com/emails/receiving/{email_id}",
+                headers={"Authorization": f"Bearer {settings.RESEND_API_KEY}"}
+            )
+            response.raise_for_status()
+            email_content = response.json()
 
         # Extract email body (try HTML first, fallback to plain text)
         html_body = email_content.get("html")
