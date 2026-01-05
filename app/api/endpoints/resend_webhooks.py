@@ -75,8 +75,8 @@ async def handle_email_received(payload: Dict[str, Any]):
     # Fetch full email content (body, HTML, attachments) via Resend API
     # Note: Webhooks only include metadata - you must fetch the content separately
     try:
-        # Get email content using Resend API
-        email_content = resend.Emails.get(email_id)
+        # Get email content using Resend Receiving API (not the sent emails API)
+        email_content = resend.emails.receiving.get(email_id)
 
         # Extract email body (try HTML first, fallback to plain text)
         html_body = email_content.get("html")
