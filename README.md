@@ -264,10 +264,10 @@ docker-compose logs -f worker
 **Total S3 cost**: ~$0.20/month for 10,000 candidates
 
 ### OpenAI API Costs
-- **GPT-4o scoring**: ~$0.006 per candidate
-- **10,000 candidates**: **$60/month**
+- **GPT-4o scoring**: ~$0.01-0.02 per candidate (1-2 cents)
+- **10,000 candidates**: **$100-200/month**
 
-**S3 adds <0.3% to total infrastructure costs**
+**S3 adds <0.2% to total infrastructure costs**
 
 ## Security
 
