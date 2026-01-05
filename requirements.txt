@@ -8,6 +8,7 @@ aiofiles==23.2.1
 python-jose[cryptography]==3.3.0  # JWT token generation/validation
 passlib[bcrypt]==1.7.4            # Password hashing
 bcrypt==3.2.0                     # Compatible version with passlib 1.7.4
+cryptography==42.0.0              # Token encryption for OAuth
 
 # Database
 sqlalchemy==2.0.25
