@@ -47,7 +47,12 @@ class User(Base):
 
     # Relationships
     subscription = relationship("Subscription", back_populates="user", uselist=False, cascade="all, delete-orphan")
-    oauth_connections = relationship("OAuthConnection", back_populates="user", foreign_keys="[OAuthConnection.user_id]", cascade="all, delete-orphan")
+    oauth_connections = relationship(
+        "OAuthConnection",
+        back_populates="user",
+        foreign_keys="OAuthConnection.user_id",
+        cascade="all, delete-orphan"
+    )
 
     def __repr__(self):
         return f"<User(id={self.id}, email='{self.email}', tenant_id={self.tenant_id})>"
