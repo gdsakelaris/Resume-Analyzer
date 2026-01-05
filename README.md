@@ -4,11 +4,15 @@ Starscreen is a production-ready SaaS platform that automates resume screening u
 
 ## Features
 
-- **AI-Powered Scoring**: Intelligent resume analysis using OpenAI GPT-4
+- **AI-Powered Scoring**: Intelligent resume analysis using OpenAI GPT-4o with deterministic scoring
+- **Interview Question Generation**: AI-generated talking points for each candidate
 - **Multi-Tenant Architecture**: Secure, isolated workspaces for each organization
-- **Subscription Tiers**: Free, Recruiter, Small Business, Professional, and Enterprise plans
-- **Cloud-Native Storage**: AWS S3 integration for horizontal scalability
+- **Subscription Tiers**: Free, Recruiter, Small Business, and Enterprise plans with annual discounts
+- **Email Verification**: Resend integration for secure user authentication
+- **Support Email System**: Incoming email support via Resend webhooks
+- **Cloud-Native Storage**: AWS S3 integration with AES-256 encryption
 - **Async Processing**: Celery + Redis for background resume parsing and scoring
+- **Stripe Payments**: Subscription billing with webhook-based sync
 - **RESTful API**: FastAPI with automatic OpenAPI documentation
 - **Production-Ready**: Docker Compose orchestration with PostgreSQL database
 
@@ -20,6 +24,7 @@ Starscreen is a production-ready SaaS platform that automates resume screening u
 - **AI**: OpenAI GPT-4o for resume analysis
 - **Storage**: AWS S3 (production) / Local filesystem (development)
 - **Payments**: Stripe integration for subscriptions
+- **Email**: Resend for verification and support emails
 - **Deployment**: Docker Compose, AWS EC2
 
 ## Project Structure
@@ -167,22 +172,26 @@ See `.env.example` for all available configuration options.
 | `SECRET_KEY` | JWT signing key | Generate with `openssl rand -hex 32` |
 | `POSTGRES_PASSWORD` | Database password | `password` |
 | `STRIPE_API_KEY` | Stripe API key for payments | - |
+| `RESEND_API_KEY` | Resend API key for emails | Required |
+| `SUPPORT_FORWARD_EMAIL` | Email to forward support messages | - |
 
 ### Subscription Tiers
 
-| Plan | Price | Candidate Limit |
-|------|-------|----------------|
-| Free | $0 | 10 candidates |
-| Recruiter | $19/month | 100 candidates |
-| Small Business | $49/month | 500 candidates |
-| Professional | $149/month | 2,500 candidates |
-| Enterprise | $499/month | 15,000 candidates |
+| Plan | Monthly Price | Annual Price | Candidate Limit |
+|------|---------------|--------------|-----------------|
+| Free | $0 | $0 | 10 candidates |
+| Recruiter | $20/month | $16/month (billed annually) | 100 candidates |
+| Small Business | $149/month | $119/month (billed annually) | 1,000 candidates |
+| Enterprise | $500/month | $400/month (billed annually) | 5,000 candidates |
+
+*Annual plans save 20%*
 
 ## Documentation
 
 - [EC2 Deployment Guide](docs/EC2_DEPLOYMENT_GUIDE.md) - Complete AWS deployment walkthrough
 - [S3 Implementation Summary](docs/S3_IMPLEMENTATION_SUMMARY.md) - S3 storage architecture and setup
 - [S3 Migration Guide](docs/s3-migration-guide.md) - Detailed S3 configuration guide
+- [Support Email Setup](docs/SUPPORT_EMAIL_SETUP.md) - Configure incoming support emails via Resend
 - [Quick Start Guide](docs/QUICK_START_NEXT_STEPS.md) - Fast deployment checklist
 
 ## Architecture
@@ -289,9 +298,9 @@ This project is proprietary software. All rights reserved.
 
 For questions or issues:
 - Open a GitHub issue
-- Email: support@starscreen.com (update with your contact)
+- Email: support@starscreen.net
 
 ---
 
 **Status**: Production-Ready
-**Last Updated**: 2026-01-01
+**Last Updated**: 2026-01-05
