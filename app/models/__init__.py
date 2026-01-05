@@ -7,6 +7,8 @@ from app.models.subscription import Subscription, SubscriptionStatus, Subscripti
 from app.models.job import Job, JobStatus
 from app.models.candidate import Candidate, CandidateStatus
 from app.models.evaluation import Evaluation
+from app.models.oauth_connection import OAuthConnection, OAuthProvider
+from app.models.external_job_posting import ExternalJobPosting, PostingStatus
 
 __all__ = [
     "User",
@@ -18,4 +20,8 @@ __all__ = [
     "Candidate",
     "CandidateStatus",
     "Evaluation",
+    "OAuthConnection",
+    "OAuthProvider",
+    "ExternalJobPosting",
+    "PostingStatus",
 ]
