@@ -30,13 +30,16 @@ bash check_local_health.sh
 
 ---
 
-### `test_deployment.sh` - Run FROM local machine
+### `test_deployment.sh` / `test_deployment.ps1` - Run FROM local machine
 **Where**: Run from your local Windows/Mac/Linux machine
 **Purpose**: Quick test to verify the deployment is working
 
 ```bash
-# From project root on your local machine
+# Linux/Mac
 bash test_deployment.sh
+
+# Windows PowerShell
+.\test_deployment.ps1
 ```
 
 **What it checks**:
@@ -49,13 +52,16 @@ bash test_deployment.sh
 
 ---
 
-### `check_deployment.sh` - Run FROM local machine
+### `check_deployment.sh` / `check_deployment.ps1` - Run FROM local machine
 **Where**: Run from your local Windows/Mac/Linux machine
 **Purpose**: Comprehensive diagnostics (12 checks)
 
 ```bash
-# From project root on your local machine
+# Linux/Mac
 bash check_deployment.sh
+
+# Windows PowerShell
+.\check_deployment.ps1
 ```
 
 **What it checks**:
@@ -110,8 +116,8 @@ bash local_create_alarms.sh
 | Script | Run Where | Purpose | When to Use |
 |--------|-----------|---------|-------------|
 | `check_local_health.sh` | EC2 | Quick local health check | SSH'd into server |
-| `test_deployment.sh` | Local | Quick deployment test | After pushing code |
-| `check_deployment.sh` | Local | Detailed diagnostics | Troubleshooting issues |
+| `test_deployment.sh` / `.ps1` | Local | Quick deployment test | After pushing code |
+| `check_deployment.sh` / `.ps1` | Local | Detailed diagnostics | Troubleshooting issues |
 | `ec2_install_cloudwatch.sh` | EC2 | Install monitoring agent | One-time setup |
 | `local_create_alarms.sh` | Local | Create CloudWatch alarms | One-time setup |
 
@@ -159,6 +165,10 @@ bash local_create_alarms.sh
 ⚠️ **Don't run `check_deployment.sh` ON the EC2 instance** - it's meant for local machines and will hang on the ping command
 
 ✅ **Do run `check_local_health.sh` ON the EC2 instance** - it's optimized for local health checks
+
+💻 **Windows users**: Use PowerShell scripts (`.ps1`) if bash scripts fail due to WSL issues:
+   - `.\test_deployment.ps1` instead of `bash test_deployment.sh`
+   - `.\check_deployment.ps1` instead of `bash check_deployment.sh`
 
 ---
 
