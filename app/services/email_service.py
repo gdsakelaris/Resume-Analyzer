@@ -89,7 +89,7 @@ class EmailService:
         subject = "Reset Your Password - Starscreen"
 
         # Build reset URL
-        reset_url = f"{settings.FRONTEND_URL}/reset-password?token={reset_token}"
+        reset_url = f"{settings.FRONTEND_URL}/static/reset-password.html?token={reset_token}"
 
         # Build HTML email body
         html_body = self._build_password_reset_html(reset_url, user_name)
