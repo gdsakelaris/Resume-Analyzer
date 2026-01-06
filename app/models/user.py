@@ -40,6 +40,10 @@ class User(Base):
     is_verified = Column(Boolean, default=False, nullable=False)  # Email verification
     is_admin = Column(Boolean, default=False, nullable=False)  # Admin role for protected endpoints
 
+    # Password reset
+    reset_token = Column(String, nullable=True, index=True)
+    reset_token_expires_at = Column(DateTime(timezone=True), nullable=True)
+
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
