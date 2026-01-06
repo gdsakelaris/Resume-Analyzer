@@ -13,7 +13,7 @@ import logging
 import uuid
 import stripe
 import secrets
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, HTTPException, Depends, status
 from sqlalchemy.orm import Session
 
@@ -148,7 +148,7 @@ def login(
         )
 
     # Update last login timestamp
-    user.last_login_at = datetime.utcnow()
+    user.last_login_at = datetime.now(timezone.utc)
     db.commit()
 
     logger.info(f"User logged in: {user.email} (verified: {user.is_verified})")
@@ -311,7 +311,7 @@ def forgot_password(
 
     # Set token and expiration (1 hour from now)
     user.reset_token = reset_token
-    user.reset_token_expires_at = datetime.utcnow() + timedelta(hours=1)
+    user.reset_token_expires_at = datetime.now(timezone.utc) + timedelta(hours=1)
 
     try:
         db.commit()
@@ -358,7 +358,7 @@ def reset_password(
         )
 
     # Check if token is expired
-    if not user.reset_token_expires_at or user.reset_token_expires_at < datetime.utcnow():
+    if not user.reset_token_expires_at or user.reset_token_expires_at < datetime.now(timezone.utc):
         # Clear expired token
         user.reset_token = None
         user.reset_token_expires_at = None
