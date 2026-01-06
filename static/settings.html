@@ -56,10 +56,9 @@
     <div id="navbar-container"></div>
 
     <script>
-        // Render navbar after DOM loads
-        document.addEventListener('DOMContentLoaded', function() {
-            renderNavbar();
-        });
+        // Render navbar IMMEDIATELY (before Alpine.js initializes)
+        // This ensures Alpine processes the navbar's x-data directives
+        renderNavbar();
     </script>
 
     <!-- Settings Page -->
